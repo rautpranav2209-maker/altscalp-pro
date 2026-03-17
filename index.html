@@ -1787,18 +1787,37 @@ let glMode='gainers',netMode='all',exchMode='all',catMode='all',searchMode='';
 
 function genC(pair,tf,n=260){
   const pd2=PAIRS.find(d=>d.p===pair);
-  const base=pd2?pd2.price:100;
-  const vf={ethereum:.0050,solana:.0080,base:.0090,bsc:.0060,arbitrum:.0055,polygon:.0045}[pd2?.cat] || 0.0060;
-  const mins={'1m':1,'5m':5,'15m':15,'1h':60,'4h':240,'1d':1440}[tf]||1;
+  let base=pd2 ? Number(pd2.price) : 100;
+  if(isNaN(base) || base <= 0) base = 100;
+  
+  const vMap={ethereum:.0050,solana:.0080,base:.0090,bsc:.0060,arbitrum:.0055,polygon:.0045};
+  let vf=pd2 && pd2.cat ? vMap[pd2.cat] : 0.0060;
+  if(isNaN(vf) || !vf) vf = 0.0060;
+
+  const mMap={'1m':1,'5m':5,'15m':15,'1h':60,'4h':240,'1d':1440};
+  let mins=mMap[tf];
+  if(isNaN(mins) || !mins) mins = 1;
+
   const now=Date.now();
   let c=base*.88,trend=0;const out=[];
   for(let i=n;i>=0;i--){
     trend=trend*.95+(Math.random()-.48)*.05;
-    const rv=vf*(.7+Math.random()*1.6);
-    const o=c;
-    c=Math.max(c*(1+trend*.5+(Math.random()-.49)*rv),base*.01);
-    const sp=rv*.3;
-    out.push({t:now-i*mins*60000,o,h:Math.max(o,c)*(1+Math.random()*sp),l:Math.min(o,c)*(1-Math.random()*sp),c,v:(Math.random()*9+1)*1e6,bull:c>=o});
+    let rv=vf*(.7+Math.random()*1.6);
+    if(isNaN(rv)) rv = 0.0060;
+    
+    let o=c;
+    c=c*(1+trend*.5+(Math.random()-.49)*rv);
+    if(isNaN(c) || c <= 0) c = base;
+    c=Math.max(c, base*.01);
+    
+    let sp=rv*.3;
+    let h=Math.max(o,c)*(1+Math.random()*sp);
+    let l=Math.min(o,c)*(1-Math.random()*sp);
+    if(isNaN(h)) h = Math.max(o, c);
+    if(isNaN(l)) l = Math.min(o, c);
+    
+    let v=(Math.random()*9+1)*1e6;
+    out.push({t:now-i*mins*60000,o,h,l,c,v,bull:c>=o});
   }
   return out;
 }
