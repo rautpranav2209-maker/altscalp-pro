@@ -1462,13 +1462,16 @@ function buildScanner(){
 }
 
 function loadPair(pair){
-  const d=PAIRS.find(x=>x.p===pair);if(!d)return;activePair=pair;
+  const d=PAIRS.find(x=>x.p===pair);if(!d)return;activePair=pair;cPair=pair;
   document.getElementById('dp-pair').innerHTML=pair+'<span style="font-size:14px;color:var(--tm)">/USDT</span>';
   ['pc','ob','rsi','vd','fr','sp','sent','liq','vol','corr'].forEach(k=>{const map={pc:'chg',ob:'ob',rsi:'rsi',vd:'vd',fr:'fr',sp:'sp',sent:'sent',liq:'liq',vol:'vol',corr:'corr'};document.getElementById('i-'+k).value=d[map[k]]||d[k]});
   curDPC=d.cat;
-  document.querySelectorAll('#cat-sel span').forEach(e=>{const c=CC[e.dataset.c];e.style.opacity=e.dataset.c===d.cat?1:.35;e.style.background=e.dataset.c===d.cat?c+'22':c+'0a';e.style.color=c});
-  const cn={mid:'Mid cap',meme:'Meme coin',defi:'DeFi token',ai:'AI token',gaming:'Gaming',l2:'Layer2',infra:'Infra'};document.getElementById('dp-cat').textContent=cn[d.cat];document.getElementById('dp-cat').style.color=CC[d.cat];
+  document.querySelectorAll('#cat-sel span').forEach(e=>{const c=CC[e.dataset.c]||'#a78bfa';e.style.opacity=e.dataset.c===d.cat?1:.35;e.style.background=e.dataset.c===d.cat?c+'22':c+'0a';e.style.color=c});
+  const cn={ethereum:'Ethereum',solana:'Solana',base:'Base Network',bsc:'BNB Chain',arbitrum:'Arbitrum',polygon:'Polygon'};
+  document.getElementById('dp-cat').textContent=cn[d.cat]||d.cat;
+  document.getElementById('dp-cat').style.color=CC[d.cat]||'#a78bfa';
   renderDD();buildScanner();refreshVolChart();
+  if(typeof cBuilt !== 'undefined' && cBuilt) { cData=genC(cPair,cTF); renderOrders(); renderChart(); updSigOverlay(); }
 }
 
 /* ═══════════ SHAP / TRADE SETUP (unchanged) ═══════════ */
