@@ -1788,7 +1788,7 @@ let glMode='gainers',netMode='all',exchMode='all',catMode='all',searchMode='';
 function genC(pair,tf,n=260){
   const pd2=PAIRS.find(d=>d.p===pair);
   const base=pd2?pd2.price:100;
-  const vf={mid:.0018,meme:.0055,defi:.0025,ai:.0022,gaming:.0030,l2:.0020,infra:.0024}[pd2?.cat||'mid'];
+  const vf={ethereum:.0050,solana:.0080,base:.0090,bsc:.0060,arbitrum:.0055,polygon:.0045}[pd2?.cat] || 0.0060;
   const mins={'1m':1,'5m':5,'15m':15,'1h':60,'4h':240,'1d':1440}[tf]||1;
   const now=Date.now();
   let c=base*.88,trend=0;const out=[];
