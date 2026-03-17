@@ -597,6 +597,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 <div class="split">
   <aside class="sidebar">
     <div class="sb-sec">Category</div>
+    <div style="padding: 0 12px 10px;">
+      <input type="text" id="coin-search" placeholder="Search pair (e.g. VVV)" oninput="handleSearch(this.value)" style="width:100%; background:var(--s2); border:1px solid var(--b2); color:var(--tx); padding:6px 10px; border-radius:4px; font-size:11px; outline:none;" autocomplete="off">
+    </div>
     <div class="cat-tabs" id="cat-tabs">
       <div class="ctab active" onclick="setCat('all',this)">All</div>
       <div class="ctab" onclick="setCat('mid',this)" style="color:var(--mid)">Mid</div>
@@ -1279,8 +1282,8 @@ const CG_MAX_RETRIES = 3;
 async function fetchLiveListings() {
   if(cgRetryCount >= CG_MAX_RETRIES) return;
   try {
-    showToast('Fetching live prices...', 'info', 2000);
-    const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h');
+    showToast('Fetching live prices for 250 coins...', 'info', 2000);
+    const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false&price_change_percentage=24h');
     if (!response.ok) {
       if(response.status === 429) { showToast('Rate limited — retrying in 60s', 'warning'); return; }
       throw new Error(`HTTP error ${response.status}`);
@@ -1330,12 +1333,22 @@ function sigBt(s){return s>2?'STRONG LONG':s>0.5?'LONG':s<-2?'STRONG SHORT':s<-0
 function fp(p){return p<0.0001?p.toFixed(7):p<0.01?p.toFixed(5):p<1?p.toFixed(4):p<100?p.toFixed(2):p.toLocaleString()}
 
 /* ═══════════ SCANNER (uses global PAIRS) ═══════════ */
-function setCat(cat,el){curCat=cat;document.querySelectorAll('#cat-tabs .ctab').forEach(t=>t.classList.remove('active'));el.classList.add('active');buildScanner();buildCorrBars()}
+function setCat(cat,el){curCat=cat;searchMode='';document.getElementById('coin-search').value='';document.querySelectorAll('#cat-tabs .ctab').forEach(t=>t.classList.remove('active'));el.classList.add('active');buildScanner();buildCorrBars()}
 function setScanTF(tf,el){curTF=tf;document.querySelectorAll('.tftab').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById('dp-tf-lbl').textContent=tf+' scalp';buildScanner();renderDD();refreshVolChart()}
 function selCatDP(el){curDPC=el.dataset.c;document.querySelectorAll('#cat-sel span').forEach(e=>{const c=CC[e.dataset.c];e.style.opacity=e.dataset.c===curDPC?1:.35;e.style.background=e.dataset.c===curDPC?c+'22':c+'0a';e.style.color=c});const cn={mid:'Mid cap',meme:'Meme coin',defi:'DeFi token',ai:'AI token',gaming:'Gaming',l2:'Layer2',infra:'Infra'};document.getElementById('dp-cat').textContent=cn[curDPC];document.getElementById('dp-cat').style.color=CC[curDPC];renderDD()}
 
+function handleSearch(query){
+  searchMode=query.trim().toUpperCase();
+  document.querySelectorAll('#cat-tabs .ctab').forEach(t=>t.classList.remove('active'));
+  if(!searchMode) document.querySelector('#cat-tabs .ctab').classList.add('active'); // reset to All
+  curCat='all';
+  buildScanner();
+}
+
 function buildScanner(){
-  const list=curCat==='all'?PAIRS:PAIRS.filter(d=>d.cat===curCat);
+  let list=PAIRS;
+  if(searchMode) list=PAIRS.filter(d=>d.p.includes(searchMode));
+  else if(curCat!=='all') list=PAIRS.filter(d=>d.cat===curCat);
   const scored=list.map(d=>({...d,sig:calcSig(d)})).sort((a,b)=>Math.abs(b.sig)-Math.abs(a.sig));
   const active=scored.filter(d=>Math.abs(d.sig)>0.5).length;
   document.getElementById('m-active').textContent=active;
