@@ -1337,12 +1337,64 @@ function setCat(cat,el){curCat=cat;searchMode='';document.getElementById('coin-s
 function setScanTF(tf,el){curTF=tf;document.querySelectorAll('.tftab').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById('dp-tf-lbl').textContent=tf+' scalp';buildScanner();renderDD();refreshVolChart()}
 function selCatDP(el){curDPC=el.dataset.c;document.querySelectorAll('#cat-sel span').forEach(e=>{const c=CC[e.dataset.c];e.style.opacity=e.dataset.c===curDPC?1:.35;e.style.background=e.dataset.c===curDPC?c+'22':c+'0a';e.style.color=c});const cn={mid:'Mid cap',meme:'Meme coin',defi:'DeFi token',ai:'AI token',gaming:'Gaming',l2:'Layer2',infra:'Infra'};document.getElementById('dp-cat').textContent=cn[curDPC];document.getElementById('dp-cat').style.color=CC[curDPC];renderDD()}
 
+let isSearching = false;
 function handleSearch(query){
   searchMode=query.trim().toUpperCase();
   document.querySelectorAll('#cat-tabs .ctab').forEach(t=>t.classList.remove('active'));
   if(!searchMode) document.querySelector('#cat-tabs .ctab').classList.add('active'); // reset to All
   curCat='all';
   buildScanner();
+
+  if(searchMode.length >= 2) {
+    const list = PAIRS.filter(d=>d.p.includes(searchMode));
+    if(list.length === 0 && !isSearching) searchCoinGecko(searchMode);
+  }
+}
+
+async function searchCoinGecko(query) {
+  if(!query || isSearching) return;
+  isSearching = true;
+  const input = document.getElementById('coin-search');
+  const origPlaceholder = input.placeholder;
+  input.placeholder = `Searching CoinGecko...`;
+  try {
+    const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${query}`);
+    const data = await res.json();
+    const exactMatch = data.coins.find(c => c.symbol.toUpperCase() === query) || data.coins[0];
+    if(exactMatch) {
+       const pRes = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${exactMatch.id}&price_change_percentage=24h`);
+       const pData = await pRes.json();
+       if(pData && pData.length > 0) {
+          const coin = pData[0];
+          const sym = coin.symbol.toUpperCase();
+          if(!PAIRS.find(p=>p.p === sym)) {
+             const cat = COIN_CATEGORIES[sym] || 'mid';
+             const vol24h = coin.total_volume || 0;
+             const mcap = coin.market_cap || 0;
+             const chg = coin.price_change_percentage_24h || 0;
+             const volScore = Math.min(400, vol24h / 10000000);
+             const rsi = Math.max(10, Math.min(90, 50 + chg * 3 + (Math.random() - 0.5) * 10));
+             const ob = Math.max(-1, Math.min(1, chg * 0.15 + (Math.random() - 0.5) * 0.3));
+             const vd = Math.max(-1, Math.min(1, chg * 0.12 + (Math.random() - 0.5) * 0.2));
+             const fr = Math.max(-0.05, Math.min(0.05, chg * 0.005 + (Math.random() - 0.5) * 0.01));
+             const sp = mcap > 10e9 ? 2.5 + Math.random() * 2 : mcap > 1e9 ? 4 + Math.random() * 3 : 6 + Math.random() * 6;
+             const sent = Math.max(-1, Math.min(1, chg * 0.1 + (Math.random() - 0.5) * 0.3));
+             const liq = mcap > 10e9 ? 0.85 : mcap > 1e9 ? 0.7 : mcap > 100e6 ? 0.55 : 0.4;
+             PAIRS.push({ p: sym, cat, net:'eth', ex:'binance', price: coin.current_price, chg: +chg.toFixed(2), ob: +ob.toFixed(2), rsi: Math.round(rsi), vd: +vd.toFixed(2), fr: +fr.toFixed(3), sp: +sp.toFixed(1), sent: +sent.toFixed(2), liq: +liq.toFixed(2), vol: Math.round(volScore), corr: +(0.3 + Math.random() * 0.5).toFixed(2), img: coin.image, mcap, rank: coin.market_cap_rank });
+             if(searchMode === query) { buildScanner(); loadPair(sym); }
+             showToast(`Found ${sym} on CoinGecko`, 'success');
+          }
+       } else {
+         showToast(`No pricing data for ${query}`, 'warning');
+       }
+    } else {
+       showToast(`Could not find coin ${query}`, 'warning');
+    }
+  } catch(e) {
+    showToast(`Search failed (Rate limit)`, 'error');
+  }
+  isSearching = false;
+  input.placeholder = origPlaceholder;
 }
 
 function buildScanner(){
