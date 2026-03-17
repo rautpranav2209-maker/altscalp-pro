@@ -602,13 +602,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
     </div>
     <div class="cat-tabs" id="cat-tabs">
       <div class="ctab active" onclick="setCat('all',this)">All</div>
-      <div class="ctab" onclick="setCat('mid',this)" style="color:var(--mid)">Mid</div>
-      <div class="ctab" onclick="setCat('meme',this)" style="color:var(--meme)">Meme</div>
-      <div class="ctab" onclick="setCat('defi',this)" style="color:var(--defi)">DeFi</div>
-      <div class="ctab" onclick="setCat('ai',this)" style="color:var(--ai)">AI</div>
-      <div class="ctab" onclick="setCat('gaming',this)" style="color:var(--gaming)">Gaming</div>
-      <div class="ctab" onclick="setCat('l2',this)" style="color:var(--l2)">L2</div>
-      <div class="ctab" onclick="setCat('infra',this)" style="color:var(--infra)">Infra</div>
+      <div class="ctab" onclick="setCat('solana',this)" style="color:#00ffa3">Solana</div>
+      <div class="ctab" onclick="setCat('base',this)" style="color:#0052ff">Base</div>
+      <div class="ctab" onclick="setCat('ethereum',this)" style="color:#627eea">ETH</div>
+      <div class="ctab" onclick="setCat('bsc',this)" style="color:#f3ba2f">BSC</div>
+      <div class="ctab" onclick="setCat('arbitrum',this)" style="color:#28a0f0">Arb</div>
+      <div class="ctab" onclick="setCat('polygon',this)" style="color:#8247e5">Poly</div>
     </div>
     <div class="tf-row">
       <div class="tftab active" onclick="setScanTF('1m',this)">1m</div>
@@ -1252,9 +1251,9 @@ const STATIC_PAIRS = [
   { p:'RPL', cat:'infra', net:'eth', ex:'binance', price:24.8, chg:-0.10, ob:-0.05, rsi:49, vd:-0.08, fr:-0.005, sp:4.2, sent:0.15, liq:0.72, vol:130, corr:0.61 }
 ];
 
-// Category colors and labels (updated with new categories)
-const CC = {mid:'#00e5a0', meme:'#ff6eb4', defi:'#a78bfa', ai:'#4fa3ff', gaming:'#ffb347', l2:'#a78bfa', infra:'#ff6eb4'};
-const CL = {mid:'Mid', meme:'Meme', defi:'DeFi', ai:'AI', gaming:'Gaming', l2:'Layer2', infra:'Infra'};
+// Category colors and labels (updated for DEX chains)
+const CC = {ethereum:'#627eea', solana:'#00ffa3', base:'#0052ff', bsc:'#f3ba2f', arbitrum:'#28a0f0', polygon:'#8247e5'};
+const CL = {ethereum:'ETH', solana:'Solana', base:'Base', bsc:'BSC', arbitrum:'Arb', polygon:'Poly'};
 const TF={'1m':{tpM:0.45,slM:0.28,hold:'1–3m',pb:0.08},'5m':{tpM:0.80,slM:0.45,hold:'3–10m',pb:0.11}};
 
 let curTF='1m', curCat='all', curDPC='mid', activePair='SOL';
@@ -1264,63 +1263,80 @@ let analyticsBuilt=false;
 // Global PAIRS that will be overwritten by live data
 let PAIRS = STATIC_PAIRS; // start with fallback
 
-/* ═══════════ LIVE DATA FETCH (CoinGecko Free API) ═══════════ */
+/* ═══════════ LIVE DATA FETCH (DexScreener API) ═══════════ */
 
-// Category mapping for known coin symbols
-const COIN_CATEGORIES = {
-  DOGE:'meme', SHIB:'meme', PEPE:'meme', FLOKI:'meme', BONK:'meme', WIF:'meme', MEME:'meme', TURBO:'meme', NEIRO:'meme', BRETT:'meme', MOG:'meme',
-  UNI:'defi', AAVE:'defi', CRV:'defi', SNX:'defi', SUSHI:'defi', MKR:'defi', COMP:'defi', CAKE:'defi', PENDLE:'defi', GMX:'defi', DYDX:'defi', ENS:'defi',
-  FET:'ai', RNDR:'ai', TAO:'ai', WLD:'ai', AGIX:'ai', OCEAN:'ai', ARKM:'ai', AKT:'ai', RENDER:'ai',
-  AXS:'gaming', GALA:'gaming', NOT:'gaming', IMX:'gaming', SAND:'gaming', MANA:'gaming', ILV:'gaming', PIXEL:'gaming', RONIN:'gaming', BEAM:'gaming',
-  ARB:'l2', OP:'l2', LRC:'l2', METIS:'l2', BOBA:'l2', MATIC:'l2', POL:'l2', STRK:'l2', ZK:'l2', MANTA:'l2', BLAST:'l2',
-  PYTH:'infra', W:'infra', ZRO:'infra', EIGEN:'infra', LINK:'infra', DOT:'infra', ATOM:'infra', AVAX:'infra', NEAR:'infra', FTM:'infra', ALGO:'infra', INJ:'infra', SEI:'infra', SUI:'infra', APT:'infra', TIA:'infra', JUP:'infra', LDO:'infra', RPL:'infra'
-};
-
-let cgRetryCount = 0;
-const CG_MAX_RETRIES = 3;
+let dsRetryCount = 0;
+const DS_MAX_RETRIES = 3;
 
 async function fetchLiveListings() {
-  if(cgRetryCount >= CG_MAX_RETRIES) return;
+  if(dsRetryCount >= DS_MAX_RETRIES) return;
   try {
-    showToast('Fetching live prices for 250 coins...', 'info', 2000);
-    const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false&price_change_percentage=24h');
+    showToast('Fetching latest DEX tokens...', 'info', 2000);
+    // DexScreener doesn't have a top 250 endpoint, so we search for common high-volume pairs to start
+    const response = await fetch('https://api.dexscreener.com/latest/dex/search?q=USDT%20USDC%20WETH%20SOL');
     if (!response.ok) {
-      if(response.status === 429) { showToast('Rate limited — retrying in 60s', 'warning'); return; }
+      if(response.status === 429) { showToast('Rate limited — retrying shortly', 'warning'); return; }
       throw new Error(`HTTP error ${response.status}`);
     }
-    const coins = await response.json();
+    const data = await response.json();
+    if(!data.pairs) throw new Error('No pairs returned');
 
-    const live = coins.map(coin => {
-      const sym = coin.symbol.toUpperCase();
-      const cat = COIN_CATEGORIES[sym] || 'mid';
-      const vol24h = coin.total_volume || 0;
-      const mcap = coin.market_cap || 0;
-      const chg = coin.price_change_percentage_24h || 0;
-      const volScore = Math.min(400, vol24h / 10000000);
-      const rsi = Math.max(10, Math.min(90, 50 + chg * 3 + (Math.random() - 0.5) * 10));
-      const ob = Math.max(-1, Math.min(1, chg * 0.15 + (Math.random() - 0.5) * 0.3));
-      const vd = Math.max(-1, Math.min(1, chg * 0.12 + (Math.random() - 0.5) * 0.2));
-      const fr = Math.max(-0.05, Math.min(0.05, chg * 0.005 + (Math.random() - 0.5) * 0.01));
-      const sp = mcap > 10e9 ? 2.5 + Math.random() * 2 : mcap > 1e9 ? 4 + Math.random() * 3 : 6 + Math.random() * 6;
-      const sent = Math.max(-1, Math.min(1, chg * 0.1 + (Math.random() - 0.5) * 0.3));
-      const liq = mcap > 10e9 ? 0.85 : mcap > 1e9 ? 0.7 : mcap > 100e6 ? 0.55 : 0.4;
-      return { p: sym, cat, net:'eth', ex:'binance', price: coin.current_price, chg: +chg.toFixed(2),
-        ob: +ob.toFixed(2), rsi: Math.round(rsi), vd: +vd.toFixed(2), fr: +fr.toFixed(3),
-        sp: +sp.toFixed(1), sent: +sent.toFixed(2), liq: +liq.toFixed(2), vol: Math.round(volScore),
-        corr: +(0.3 + Math.random() * 0.5).toFixed(2), img: coin.image, mcap, rank: coin.market_cap_rank };
-    });
+    // Filter to legit-looking pairs with decent volume
+    const topPairs = data.pairs
+      .filter(p => (p.volume && p.volume.h24 > 100000) || (p.liquidity && p.liquidity.usd > 50000))
+      .sort((a,b) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))
+      .slice(0, 100);
+
+    const live = topPairs.map(p => parseDexScreenerPair(p));
 
     PAIRS = live;
-    cgRetryCount = 0;
+    dsRetryCount = 0;
     buildScanner(); buildCorrBars(); buildMTFTable();
     if (!PAIRS.some(p => p.p === activePair)) { activePair = PAIRS[0]?.p || 'BTC'; loadPair(activePair); }
-    showToast(`✓ Loaded ${live.length} coins live from CoinGecko`, 'success');
+    showToast(`✓ Loaded ${live.length} DEX tokens`, 'success');
   } catch (error) {
-    cgRetryCount++;
-    console.warn('CoinGecko fetch failed:', error.message);
-    if(cgRetryCount >= CG_MAX_RETRIES) showToast('Using offline demo data', 'warning');
+    dsRetryCount++;
+    console.warn('DexScreener fetch failed:', error.message);
+    if(dsRetryCount >= DS_MAX_RETRIES) showToast('Using offline demo data', 'warning');
     PAIRS = STATIC_PAIRS; buildScanner(); buildCorrBars(); buildMTFTable();
   }
+}
+
+function parseDexScreenerPair(p) {
+  const sym = p.baseToken.symbol.toUpperCase();
+  const cat = p.chainId || 'ethereum';
+  const vol24h = p.volume?.h24 || 0;
+  const liqUsd = p.liquidity?.usd || 0;
+  const chg = p.priceChange?.h24 || 0;
+  
+  const volScore = Math.min(400, vol24h / 50000);
+  const rsi = Math.max(10, Math.min(90, 50 + chg * 0.5 + (Math.random() - 0.5) * 10));
+  const ob = Math.max(-1, Math.min(1, chg * 0.05 + (Math.random() - 0.5) * 0.3));
+  const vd = Math.max(-1, Math.min(1, (p.volume?.h1 || 0) / 100000 + (Math.random() - 0.5) * 0.2));
+  const fr = Math.max(-0.05, Math.min(0.05, chg * 0.001 + (Math.random() - 0.5) * 0.01));
+  const sp = liqUsd > 1000000 ? 3 + Math.random() * 2 : liqUsd > 100000 ? 5 + Math.random() * 4 : 10 + Math.random() * 10;
+  const sent = Math.max(-1, Math.min(1, chg * 0.05 + (Math.random() - 0.5) * 0.3));
+  const liqScore = liqUsd > 5000000 ? 0.85 : liqUsd > 500000 ? 0.7 : liqUsd > 50000 ? 0.55 : 0.3;
+  
+  return { 
+    p: sym, 
+    cat, 
+    net: p.chainId, 
+    ex: p.dexId, 
+    price: parseFloat(p.priceUsd) || 0, 
+    chg: +chg.toFixed(2),
+    ob: +ob.toFixed(2), 
+    rsi: Math.round(rsi), 
+    vd: +vd.toFixed(2), 
+    fr: +fr.toFixed(3),
+    sp: +sp.toFixed(1), 
+    sent: +sent.toFixed(2), 
+    liq: +liqScore.toFixed(2), 
+    vol: Math.round(volScore),
+    corr: +(0.1 + Math.random() * 0.4).toFixed(2), 
+    img: p.info?.imageUrl || '', 
+    address: p.baseToken.address
+  };
 }
 
 /* ═══════════ SIGNAL MATH (unchanged) ═══════════ */
@@ -1335,7 +1351,7 @@ function fp(p){return p<0.0001?p.toFixed(7):p<0.01?p.toFixed(5):p<1?p.toFixed(4)
 /* ═══════════ SCANNER (uses global PAIRS) ═══════════ */
 function setCat(cat,el){curCat=cat;searchMode='';document.getElementById('coin-search').value='';document.querySelectorAll('#cat-tabs .ctab').forEach(t=>t.classList.remove('active'));el.classList.add('active');buildScanner();buildCorrBars()}
 function setScanTF(tf,el){curTF=tf;document.querySelectorAll('.tftab').forEach(t=>t.classList.remove('active'));el.classList.add('active');document.getElementById('dp-tf-lbl').textContent=tf+' scalp';buildScanner();renderDD();refreshVolChart()}
-function selCatDP(el){curDPC=el.dataset.c;document.querySelectorAll('#cat-sel span').forEach(e=>{const c=CC[e.dataset.c];e.style.opacity=e.dataset.c===curDPC?1:.35;e.style.background=e.dataset.c===curDPC?c+'22':c+'0a';e.style.color=c});const cn={mid:'Mid cap',meme:'Meme coin',defi:'DeFi token',ai:'AI token',gaming:'Gaming',l2:'Layer2',infra:'Infra'};document.getElementById('dp-cat').textContent=cn[curDPC];document.getElementById('dp-cat').style.color=CC[curDPC];renderDD()}
+function selCatDP(el){curDPC=el.dataset.c;document.querySelectorAll('#cat-sel span').forEach(e=>{const c=CC[e.dataset.c]||'#00e5a0';e.style.opacity=e.dataset.c===curDPC?1:.35;e.style.background=e.dataset.c===curDPC?c+'22':c+'0a';e.style.color=c});const cn={ethereum:'Ethereum',solana:'Solana',base:'Base Network',bsc:'BNB Chain',arbitrum:'Arbitrum',polygon:'Polygon'};document.getElementById('dp-cat').textContent=cn[curDPC]||curDPC;document.getElementById('dp-cat').style.color=CC[curDPC]||'#00e5a0';renderDD()}
 
 let isSearching = false;
 function handleSearch(query){
@@ -1356,42 +1372,43 @@ async function searchCoinGecko(query) {
   isSearching = true;
   const input = document.getElementById('coin-search');
   const origPlaceholder = input.placeholder;
-  input.placeholder = `Searching CoinGecko...`;
+  input.placeholder = `Searching 38M+ DEX tokens...`;
   try {
-    const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${query}`);
+    const res = await fetch(`https://api.dexscreener.com/latest/dex/search?q=${query}`);
     const data = await res.json();
-    const exactMatch = data.coins.find(c => c.symbol.toUpperCase() === query) || data.coins[0];
-    if(exactMatch) {
-       const pRes = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${exactMatch.id}&price_change_percentage=24h`);
-       const pData = await pRes.json();
-       if(pData && pData.length > 0) {
-          const coin = pData[0];
-          const sym = coin.symbol.toUpperCase();
-          if(!PAIRS.find(p=>p.p === sym)) {
-             const cat = COIN_CATEGORIES[sym] || 'mid';
-             const vol24h = coin.total_volume || 0;
-             const mcap = coin.market_cap || 0;
-             const chg = coin.price_change_percentage_24h || 0;
-             const volScore = Math.min(400, vol24h / 10000000);
-             const rsi = Math.max(10, Math.min(90, 50 + chg * 3 + (Math.random() - 0.5) * 10));
-             const ob = Math.max(-1, Math.min(1, chg * 0.15 + (Math.random() - 0.5) * 0.3));
-             const vd = Math.max(-1, Math.min(1, chg * 0.12 + (Math.random() - 0.5) * 0.2));
-             const fr = Math.max(-0.05, Math.min(0.05, chg * 0.005 + (Math.random() - 0.5) * 0.01));
-             const sp = mcap > 10e9 ? 2.5 + Math.random() * 2 : mcap > 1e9 ? 4 + Math.random() * 3 : 6 + Math.random() * 6;
-             const sent = Math.max(-1, Math.min(1, chg * 0.1 + (Math.random() - 0.5) * 0.3));
-             const liq = mcap > 10e9 ? 0.85 : mcap > 1e9 ? 0.7 : mcap > 100e6 ? 0.55 : 0.4;
-             PAIRS.push({ p: sym, cat, net:'eth', ex:'binance', price: coin.current_price, chg: +chg.toFixed(2), ob: +ob.toFixed(2), rsi: Math.round(rsi), vd: +vd.toFixed(2), fr: +fr.toFixed(3), sp: +sp.toFixed(1), sent: +sent.toFixed(2), liq: +liq.toFixed(2), vol: Math.round(volScore), corr: +(0.3 + Math.random() * 0.5).toFixed(2), img: coin.image, mcap, rank: coin.market_cap_rank });
-             if(searchMode === query) { buildScanner(); loadPair(sym); }
-             showToast(`Found ${sym} on CoinGecko`, 'success');
-          }
+    
+    if(data.pairs && data.pairs.length > 0) {
+       // Filter out absolute garbage (0 volume)
+       const validPairs = data.pairs.filter(p => p.volume?.h24 > 0).sort((a,b) => (b.volume?.h24||0) - (a.volume?.h24||0));
+       if (validPairs.length > 0) {
+         let addedCount = 0;
+         validPairs.slice(0, 5).forEach(p => {
+           const sym = p.baseToken.symbol.toUpperCase();
+           if(!PAIRS.find(existing=>existing.p === sym && existing.cat === p.chainId)) {
+             const newObj = parseDexScreenerPair(p);
+             if(newObj.p.includes(query.toUpperCase())) { // Double check it actually matches
+               PAIRS.push(newObj);
+               addedCount++;
+             }
+           }
+         });
+         
+         if (addedCount > 0) {
+           const topSym = validPairs[0].baseToken.symbol.toUpperCase();
+           if(searchMode === query) { buildScanner(); loadPair(topSym); }
+           showToast(`Found ${topSym} on ${validPairs[0].chainId}`, 'success');
+         } else if (PAIRS.some(p => p.p.includes(query.toUpperCase()))) {
+           showToast(`Already showing matches for ${query}`, 'info');
+         }
        } else {
-         showToast(`No pricing data for ${query}`, 'warning');
+         showToast(`No active pairs found for ${query}`, 'warning');
        }
     } else {
-       showToast(`Could not find coin ${query}`, 'warning');
+       showToast(`Could not find token ${query}`, 'warning');
     }
   } catch(e) {
-    showToast(`Search failed (Rate limit)`, 'error');
+    console.error(e);
+    showToast(`Search failed (Rate limit or network)`, 'error');
   }
   isSearching = false;
   input.placeholder = origPlaceholder;
