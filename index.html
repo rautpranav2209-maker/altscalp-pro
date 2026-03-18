@@ -1836,39 +1836,35 @@ function genC(pair,tf,n=260){
   return out;
 }
 
-/* ═══════════ REAL OHLCV CANDLE FETCH (DexScreener) ═══════════ */
+/* ═══════════ REAL OHLCV CANDLE FETCH (Binance API → genC fallback) ═══════════ */
 async function fetchRealCandles(pair, tf) {
-  const pd2 = PAIRS.find(d => d.p === pair);
-  if (!pd2 || !pd2.pairAddress || !pd2.chainId) {
-    // Static PAIR or no address — fall back to simulated data
-    return genC(pair, tf);
-  }
-
-  // DexScreener resolution mapping
-  const resMap = {'1m':'1m','5m':'5m','15m':'15m','1h':'1h','4h':'4h','1d':'1D'};
-  const res = resMap[tf] || '15m';
+  // Binance interval mapping
+  const intervalMap = {'1m':'1m','5m':'5m','15m':'15m','1h':'1h','4h':'4h','1d':'1d'};
+  const interval = intervalMap[tf] || '15m';
+  const symbol = pair.replace(/USDC$|BUSD$/,'USDT').toUpperCase() + (pair.endsWith('USDT')?'':'USDT');
 
   try {
-    const url = `https://api.dexscreener.com/latest/dex/candles/${pd2.chainId}/${pd2.pairAddress}?resolution=${res}&from=${Math.floor(Date.now()/1000)-86400*3}&to=${Math.floor(Date.now()/1000)}`;
+    // Binance public API — no key required
+    const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=300`;
     const resp = await fetch(url);
-    if (!resp.ok) throw new Error('candles HTTP ' + resp.status);
-    const data = await resp.json();
+    if (!resp.ok) throw new Error(`Binance HTTP ${resp.status}`);
+    const rows = await resp.json();
+    if (!Array.isArray(rows) || rows.length < 5) throw new Error('no data');
 
-    const candles = data.candles || data.c || data.data;
-    if (!candles || !candles.length) throw new Error('no candles');
+    return rows.map(r => ({
+      t: r[0],
+      o: parseFloat(r[1]),
+      h: parseFloat(r[2]),
+      l: parseFloat(r[3]),
+      c: parseFloat(r[4]),
+      v: parseFloat(r[5]),
+      bull: parseFloat(r[4]) >= parseFloat(r[1])
+    })).filter(c => !isNaN(c.o) && c.o > 0);
 
-    return candles.map(c => {
-      const o = +c.open  || +c.o;
-      const h = +c.high  || +c.h;
-      const l = +c.low   || +c.l;
-      const cl= +c.close || +c.c;
-      const v = +c.volume|| +c.v || 0;
-      const t = (c.timestamp || c.time || c.t) * (c.timestamp > 1e12 ? 1 : 1000);
-      return {t, o, h, l, c: cl, v, bull: cl >= o};
-    }).filter(c => !isNaN(c.o) && !isNaN(c.c));
+  } catch(binanceErr) {
+    console.warn('Binance fetch failed for', symbol, '—', binanceErr.message, '(using simulated data seeded at real price)');
 
-  } catch(err) {
-    console.warn('Real candle fetch failed for', pair, '-', err.message, '— using simulated data');
+    // genC already seeds from PAIRS[pair].price which is real DexScreener price
     return genC(pair, tf);
   }
 }
