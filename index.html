@@ -1850,8 +1850,9 @@ function buildML(){
   if(exchMode!=='all') list = list.filter(d => d.ex && d.ex.split(',').includes(exchMode));
   if(catMode!=='all') list = list.filter(d => d.cat === catMode);
   if(searchMode) {
-    const s = searchMode.toLowerCase();
-    list = list.filter(d => d.p.toLowerCase().includes(s));
+    // Strip common quote suffixes so 'BIOUSDT' matches 'BIO'
+    const cleanQ = searchMode.replace(/(USDT|USDC|BUSD|BTC|ETH|BNB)$/,'').toLowerCase();
+    list = list.filter(d => d.p.toLowerCase().includes(cleanQ));
   }
   if(glMode==='gainers')list.sort((a,b)=>b.chg-a.chg);
   else if(glMode==='losers')list.sort((a,b)=>a.chg-b.chg);
@@ -1860,12 +1861,12 @@ function buildML(){
     const gc=d.chg>=0?'#00e5a0':'#ff4560';const sc=sigColor(d.sig);
     return`<div class="mktrow${d.p===cPair?' csel':''}" onclick="selPair('${d.p}')">
       <div style="min-width:0">
-        <div class="mktrow-name" style="color:${CC[d.cat]}">${d.p}<span style="color:var(--td);font-size:10px;font-weight:400">/USDT</span></div>
+        <div class="mktrow-name" style="color:${CC[d.cat]||'#a78bfa'}">${d.p}<span style="color:var(--td);font-size:10px;font-weight:400">/USDT</span></div>
         <div class="mktrow-sub">${fpc(d.price,d.p)} <span style="color:${gc}">${d.chg>=0?'▲':'▼'}${Math.abs(d.chg).toFixed(2)}%</span></div>
       </div>
       <div class="mktrow-r">
         <div class="mktrow-sig" style="color:${sc}">${(d.sig>=0?'+':'')+d.sig.toFixed(2)}</div>
-        <div class="mktrow-cat" style="color:${CC[d.cat]}">${CL[d.cat]}</div>
+        <div class="mktrow-cat" style="color:${CC[d.cat]||'#a78bfa'}">${CL[d.cat]||d.cat}</div>
       </div>
     </div>`;
   }).join('');
@@ -1879,9 +1880,13 @@ function applyFilters(){
   buildML();
   
   if(searchMode.length >= 2) {
-    const list = PAIRS.filter(d=>d.p.includes(searchMode));
-    if(list.length === 0 && typeof isSearching !== 'undefined' && !isSearching) {
-      searchCoinGecko(searchMode);
+    // Strip USDT etc. before searching the 38M DEX database
+    const apiQuery = searchMode.replace(/(USDT|USDC|BUSD|BTC|ETH|BNB)$/,'');
+    if(apiQuery.length >= 2) {
+      const list = PAIRS.filter(d=>d.p.toUpperCase().includes(apiQuery));
+      if(list.length === 0 && !isSearching) {
+        searchCoinGecko(apiQuery);
+      }
     }
   }
 }
