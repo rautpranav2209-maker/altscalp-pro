@@ -2461,25 +2461,55 @@ function initChart(){
   loadTVChart(cPair, cTF);
 }
 
-function loadTVChart(pair, tf) {
+async function loadTVChart(pair, tf) {
   const container = document.getElementById('tv-widget-container');
   if(!container) return;
 
-  // Clear previous widget
-  container.innerHTML = '';
-
-  // Build symbol — prefer Binance for Spot pairs, Bybit for others
   const base = pair.toUpperCase().replace(/(USDT|USDC|BUSD)$/,'');
-  const binancePairs = ['BTC','ETH','BNB','SOL','DOGE','SHIB','PEPE','ADA','XRP','AVAX',
-    'DOT','MATIC','LINK','UNI','AAVE','ARB','OP','NEAR','APT','SUI','FET','RNDR',
-    'IMX','INJ','FTM','WIF','BONK','FLOKI','GALA','SAND','MANA','LTC','ATOM','FIL'];
-  const exchange = binancePairs.includes(base) ? 'BINANCE' : 'BYBIT';
-  const symbol = `${exchange}:${base}USDT`;
-
+  const sym = base + 'USDT';
   const intervals = {'1m':'1','5m':'5','15m':'15','1h':'60','4h':'240','1d':'D'};
   const interval = intervals[tf] || '15';
 
-  // Create widget wrapper
+  // Show loading state
+  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#4fa3ff;font-size:13px;letter-spacing:.05em">📊 Loading ${base}/USDT chart...</div>`;
+
+  // 1. Check Binance first (fastest, most data)
+  let exchange = null;
+  try {
+    const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}`, {signal:AbortSignal.timeout(3000)});
+    if(r.ok) exchange = 'BINANCE';
+  } catch(e) {}
+
+  // 2. Try Bybit
+  if(!exchange) {
+    try {
+      const r = await fetch(`https://api.bybit.com/v5/market/tickers?category=spot&symbol=${sym}`, {signal:AbortSignal.timeout(3000)});
+      if(r.ok) { const d=await r.json(); if(d?.result?.list?.length) exchange='BYBIT'; }
+    } catch(e) {}
+  }
+
+  // 3. Try MEXC (lists most altcoins)
+  if(!exchange) {
+    try {
+      const r = await fetch(`https://api.mexc.com/api/v3/ticker/price?symbol=${sym}`, {signal:AbortSignal.timeout(3000)});
+      if(r.ok) exchange = 'MEXC';
+    } catch(e) {}
+  }
+
+  // 4. Not on any CEX — show friendly message
+  if(!exchange) {
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:10px;color:var(--tm)">
+      <div style="font-size:32px">🦄</div>
+      <div style="font-size:13px;font-weight:700;color:var(--tx)">${base}/USDT</div>
+      <div style="font-size:11px;text-align:center;max-width:240px">This token is only listed on DEX (DexScreener).<br>No TradingView chart available.</div>
+      <div style="font-size:10px;color:var(--td)">Try BTC, ETH, SOL, DOGE or any major coin</div>
+    </div>`;
+    return;
+  }
+
+  const symbol = `${exchange}:${sym}`;
+  container.innerHTML = '';
+
   const wrapper = document.createElement('div');
   wrapper.className = 'tradingview-widget-container';
   wrapper.style.cssText = 'height:100%;width:100%';
@@ -2489,7 +2519,6 @@ function loadTVChart(pair, tf) {
   inner.style.cssText = 'height:100%;width:100%';
   wrapper.appendChild(inner);
 
-  // TradingView Advanced Chart Widget config
   const config = {
     "autosize": true,
     "symbol": symbol,
@@ -2502,22 +2531,16 @@ function loadTVChart(pair, tf) {
     "gridColor": "rgba(255, 255, 255, 0.06)",
     "allow_symbol_change": true,
     "hide_side_toolbar": false,
-    "studies": [
-      "RSI@tv-basicstudies",
-      "MACD@tv-basicstudies",
-      "BB@tv-basicstudies"
-    ],
+    "studies": ["RSI@tv-basicstudies","MACD@tv-basicstudies","BB@tv-basicstudies"],
     "support_host": "https://www.tradingview.com"
   };
 
-  // Embed script — uses cache-buster so it re-executes on every symbol change
   const script = document.createElement('script');
   script.type = 'text/javascript';
   script.src = `https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js?t=${Date.now()}`;
   script.async = true;
   script.innerHTML = JSON.stringify(config);
   wrapper.appendChild(script);
-
   container.appendChild(wrapper);
 }
 
