@@ -250,6 +250,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
 .of-submit{width:100%;padding:9px;border:none;border-radius:4px;font-size:13px;font-weight:800;font-family:var(--fn);cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:all .15s;margin-top:3px}
 .of-submit:hover{filter:brightness(1.12)}
 .of-submit:active{transform:scale(.98)}
+.lev-preset{padding:3px 8px;border:1px solid var(--b2);border-radius:4px;background:var(--s3);color:var(--tm);font-family:var(--fn);font-weight:700;font-size:10px;cursor:pointer;transition:.12s}
+.lev-preset:hover{border-color:var(--bl);color:var(--bl)}
 
 /* Running orders list */
 .rorder{padding:9px 11px;border-bottom:1px solid var(--b1);font-size:11px;transition:background .1s}
@@ -608,6 +610,31 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
         <div class="of-tab long-t active" id="of-long" onclick="setOS('long')">▲ Long</div>
         <div class="of-tab short-t" id="of-short" onclick="setOS('short')">▼ Short</div>
       </div>
+      <!-- Leverage row (like Binance) -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="of-label" style="margin:0">Leverage</div>
+        <button id="lev-btn" onclick="openLevModal()" style="background:rgba(79,163,255,.12);color:#4fa3ff;border:1px solid rgba(79,163,255,.3);border-radius:5px;padding:3px 12px;font-family:var(--fn);font-weight:800;font-size:12px;cursor:pointer;letter-spacing:.03em">1x</button>
+      </div>
+      <!-- Leverage Modal -->
+      <div id="lev-modal" style="display:none;background:var(--s2);border:1px solid var(--b2);border-radius:10px;padding:14px;margin-bottom:10px;position:relative">
+        <div style="font-size:9px;color:var(--tm);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Set Leverage</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <input type="range" id="lev-slider" min="1" max="125" value="1" oninput="onLevSlider(this.value)" style="flex:1">
+          <div style="background:var(--s3);border:1px solid var(--b2);border-radius:5px;padding:3px 10px;font-family:var(--fn);font-weight:800;font-size:13px;color:#4fa3ff;min-width:44px;text-align:center" id="lev-disp">1x</div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px">
+          <button onclick="setLev(1)"  class="lev-preset">1x</button>
+          <button onclick="setLev(5)"  class="lev-preset">5x</button>
+          <button onclick="setLev(10)" class="lev-preset">10x</button>
+          <button onclick="setLev(25)" class="lev-preset">25x</button>
+          <button onclick="setLev(50)" class="lev-preset">50x</button>
+          <button onclick="setLev(75)" class="lev-preset">75x</button>
+          <button onclick="setLev(100)" class="lev-preset">100x</button>
+          <button onclick="setLev(125)" class="lev-preset" style="color:var(--r);border-color:rgba(255,69,96,.3)">125x</button>
+        </div>
+        <div style="font-size:9px;color:var(--td);margin-bottom:8px">⚠️ High leverage = high risk. Max 125x like Binance Futures.</div>
+        <button onclick="closeLevModal()" style="width:100%;padding:6px;background:var(--bl);color:#fff;border:none;border-radius:6px;font-family:var(--fn);font-weight:700;font-size:11px;cursor:pointer">Confirm</button>
+      </div>
       <div class="of-label">Order type</div>
       <select id="of-type" class="of-input" onchange="refreshOF()">
         <option value="market">Market (instant fill)</option>
@@ -644,9 +671,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
         </div>
       </div>
       <div class="of-stats">
+        <span>Margin (USDT)</span><span id="of-margin" style="color:var(--a)">—</span>
         <span>Est. profit</span><span id="of-ep" style="color:var(--g)">—</span>
         <span>Max risk</span><span id="of-er" style="color:var(--r)">—</span>
         <span>R:R ratio</span><span id="of-rr" style="color:var(--a)">—</span>
+        <span>Liq. price</span><span id="of-liq" style="color:#ff4560">—</span>
         <span>% of capital</span><span id="of-cp">—</span>
       </div>
       <button class="of-submit" id="of-submit" onclick="placeOrder()" style="background:var(--g);color:#030e08">▲ Place Long</button>
@@ -2174,28 +2203,66 @@ function setQP(pct){
   document.getElementById('qty-bar').style.width=pct+'%';
   updateOFCalc();
 }
+/* ═══════════ LEVERAGE FUNCTIONS ═══════════ */
+let cLeverage = 1;
+
+function openLevModal(){
+  document.getElementById('lev-modal').style.display =
+    document.getElementById('lev-modal').style.display === 'none' ? 'block' : 'none';
+}
+function closeLevModal(){
+  document.getElementById('lev-modal').style.display = 'none';
+}
+function onLevSlider(v){
+  document.getElementById('lev-disp').textContent = v + 'x';
+  cLeverage = +v;
+  document.getElementById('lev-btn').textContent = v + 'x';
+  updateOFCalc();
+}
+function setLev(v){
+  cLeverage = v;
+  document.getElementById('lev-slider').value = v;
+  document.getElementById('lev-disp').textContent = v + 'x';
+  document.getElementById('lev-btn').textContent = v + 'x';
+  updateOFCalc();
+}
+
 function updateOFCalc(){
   const entry=+document.getElementById('of-price').value||0;
   const tp=+document.getElementById('of-tp').value||0;
   const sl=+document.getElementById('of-sl').value||0;
   const qty=+document.getElementById('of-qty').value||0;
+  const lev=cLeverage||1;
+  const margin=qty/lev; // actual margin needed
   const qpct=AVAIL>0?Math.min(100,qty/AVAIL*100):0;
   document.getElementById('qty-bar').style.width=qpct+'%';
   document.getElementById('qty-bar').style.background=qpct>80?'#ff4560':qpct>50?'#ffb347':'#00e5a0';
+  // Show margin
+  const marginEl=document.getElementById('of-margin');
+  if(marginEl) marginEl.textContent=qty>0?'$'+margin.toFixed(2):'—';
   const epEl=document.getElementById('of-ep');
   const erEl=document.getElementById('of-er');
   const rrEl=document.getElementById('of-rr');
-  document.getElementById('of-cp').textContent=AVAIL>0?(qty/AVAIL*100).toFixed(1)+'%':'—';
+  const liqEl=document.getElementById('of-liq');
+  document.getElementById('of-cp').textContent=AVAIL>0?(margin/AVAIL*100).toFixed(1)+'%':'—';
+  // Leveraged PnL calculation
   if(entry>0&&tp>0){
-    const pnl=OSIDE==='long'?(tp-entry)/entry*qty:(entry-tp)/entry*qty;
+    const pnl=OSIDE==='long'?(tp-entry)/entry*qty*lev:(entry-tp)/entry*qty*lev;
     epEl.textContent=(pnl>=0?'+':'')+' $'+Math.abs(pnl).toFixed(2);epEl.style.color=pnl>=0?'#00e5a0':'#ff4560';
   } else {epEl.textContent='—';epEl.style.color='var(--tm)'}
   if(entry>0&&sl>0){
-    const risk=OSIDE==='long'?(entry-sl)/entry*qty:(sl-entry)/entry*qty;
+    const risk=OSIDE==='long'?(entry-sl)/entry*qty*lev:(sl-entry)/entry*qty*lev;
     erEl.textContent='-$'+Math.abs(risk).toFixed(2);
-    if(tp>0){const p2=OSIDE==='long'?(tp-entry)/entry*qty:(entry-tp)/entry*qty;const rr=p2/Math.abs(risk);rrEl.textContent=rr.toFixed(2)+':1';rrEl.style.color=rr>=2?'#00e5a0':rr>=1?'#ffb347':'#ff4560';}
+    if(tp>0){const p2=OSIDE==='long'?(tp-entry)/entry*qty*lev:(entry-tp)/entry*qty*lev;const rr=p2/Math.abs(risk);rrEl.textContent=rr.toFixed(2)+':1';rrEl.style.color=rr>=2?'#00e5a0':rr>=1?'#ffb347':'#ff4560';}
     else rrEl.textContent='—';
   } else {erEl.textContent='—';rrEl.textContent='—'}
+  // Liquidation price (Binance formula)
+  if(liqEl&&entry>0&&lev>1){
+    const liqP=OSIDE==='long'
+      ? entry*(1 - 1/lev + 0.005)
+      : entry*(1 + 1/lev - 0.005);
+    liqEl.textContent=fpc(liqP,cPair);liqEl.style.color='#ff4560';
+  } else if(liqEl){liqEl.textContent='—';}
 }
 
 function placeOrder(){
