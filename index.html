@@ -1836,35 +1836,65 @@ function genC(pair,tf,n=260){
   return out;
 }
 
-/* ═══════════ REAL OHLCV CANDLE FETCH (Binance API → genC fallback) ═══════════ */
+/* ═══════════ REAL OHLCV CANDLE FETCH ═══════════ */
+
+// CoinGecko simple ID mappings for common coins
+const CG_IDS = {
+  BTC:'bitcoin', ETH:'ethereum', BNB:'binancecoin', SOL:'solana',
+  AVAX:'avalanche-2', DOT:'polkadot', MATIC:'matic-network', LINK:'chainlink',
+  ADA:'cardano', XRP:'ripple', LTC:'litecoin', UNI:'uniswap', AAVE:'aave',
+  DOGE:'dogecoin', SHIB:'shiba-inu', PEPE:'pepe', WIF:'dogwifcoin',
+  BONK:'bonk', FLOKI:'floki', ARB:'arbitrum', OP:'optimism',
+  FET:'fetch-ai', RNDR:'render-token', IMX:'immutable-x', APT:'aptos',
+  SUI:'sui', TON:'the-open-network', NEAR:'near', ATOM:'cosmos',
+  INJ:'injective-protocol', FTM:'fantom', HBAR:'hedera-hashgraph'
+};
+
+async function getRealCurrentPrice(pair) {
+  try {
+    const cgId = CG_IDS[pair.toUpperCase()];
+    if (!cgId) return null;
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${cgId}&vs_currencies=usd`;
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data[cgId]?.usd || null;
+  } catch { return null; }
+}
+
 async function fetchRealCandles(pair, tf) {
-  // Binance interval mapping
   const intervalMap = {'1m':'1m','5m':'5m','15m':'15m','1h':'1h','4h':'4h','1d':'1d'};
   const interval = intervalMap[tf] || '15m';
-  const symbol = pair.replace(/USDC$|BUSD$/,'USDT').toUpperCase() + (pair.endsWith('USDT')?'':'USDT');
+  const symbol = pair.toUpperCase() + (pair.toUpperCase().endsWith('USDT') ? '' : 'USDT');
 
   try {
-    // Binance public API — no key required
+    // Try Binance public OHLCV API (no key required, CORS-enabled)
     const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=300`;
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`Binance HTTP ${resp.status}`);
+    const resp = await fetch(url, {signal: AbortSignal.timeout(5000)});
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const rows = await resp.json();
-    if (!Array.isArray(rows) || rows.length < 5) throw new Error('no data');
+    if (!Array.isArray(rows) || rows.length < 5) throw new Error('empty');
 
     return rows.map(r => ({
-      t: r[0],
-      o: parseFloat(r[1]),
-      h: parseFloat(r[2]),
-      l: parseFloat(r[3]),
-      c: parseFloat(r[4]),
-      v: parseFloat(r[5]),
-      bull: parseFloat(r[4]) >= parseFloat(r[1])
+      t: r[0], o: +r[1], h: +r[2], l: +r[3], c: +r[4], v: +r[5],
+      bull: +r[4] >= +r[1]
     })).filter(c => !isNaN(c.o) && c.o > 0);
 
-  } catch(binanceErr) {
-    console.warn('Binance fetch failed for', symbol, '—', binanceErr.message, '(using simulated data seeded at real price)');
+  } catch(err) {
+    console.warn('Binance failed for', symbol, '-', err.message);
 
-    // genC already seeds from PAIRS[pair].price which is real DexScreener price
+    // Fallback: get the real current price and seed genC correctly
+    const realPrice = await getRealCurrentPrice(pair);
+    if (realPrice && realPrice > 0) {
+      // Temporarily override pair price so genC uses correct base
+      const pd2 = PAIRS.find(d => d.p === pair);
+      const origPrice = pd2?.price;
+      if (pd2) pd2.price = realPrice;
+      const candles = genC(pair, tf);
+      if (pd2 && origPrice !== undefined) pd2.price = origPrice;
+      return candles;
+    }
+
     return genC(pair, tf);
   }
 }
