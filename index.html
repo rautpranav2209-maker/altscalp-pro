@@ -2097,7 +2097,13 @@ function macd(cl,f=12,s=26,sg=9){
 }
 
 function buildML(){
-  let list=PAIRS.map(d=>({...d,sig:calcSig(d)}));
+  const CEX_EXCHANGES = ['binance','bybit','kucoin','okx','mexc','gate','kraken','coinbase','huobi','bitget','bingx'];
+  let list=PAIRS.map(d=>({...d,sig:calcSig(d)}))
+    // Only show tokens listed on a real broker/CEX
+    .filter(d => {
+      const ex = (d.ex||'').toLowerCase();
+      return CEX_EXCHANGES.some(e => ex.includes(e));
+    });
   if(netMode!=='all') list = list.filter(d => d.net === netMode);
   if(exchMode!=='all') list = list.filter(d => d.ex && d.ex.split(',').includes(exchMode));
   if(catMode!=='all') list = list.filter(d => d.cat === catMode);
