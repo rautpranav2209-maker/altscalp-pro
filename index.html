@@ -87,8 +87,8 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .igrp{margin-bottom:8px}
 .ilbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--tm);margin-bottom:3px}
 .irow{display:flex;align-items:center;gap:8px}
-input[type=range]{flex:1;-webkit-appearance:none;height:2px;background:var(--td);border-radius:2px;outline:none}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--g);cursor:pointer}
+input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:2px;background:var(--td);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:13px;height:13px;border-radius:50%;background:var(--g);cursor:pointer}
 .ival{font-family:var(--fn);font-size:12px;font-weight:700;width:52px;text-align:right;color:var(--tx)}
 
 /* SHAP */
@@ -376,7 +376,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 .pro-modal-close{position:absolute;top:14px;right:18px;font-size:20px;cursor:pointer;color:var(--tm);transition:.15s}
 .pro-modal-close:hover{color:var(--tx)}
 .pro-badge{display:inline-block;background:linear-gradient(90deg,#f0b90b,#ff9800);color:#000;font-weight:800;font-size:10px;letter-spacing:.08em;padding:3px 10px;border-radius:20px;margin-bottom:12px}
-.pro-title{font-family:var(--fn);font-size:28px;font-weight:800;margin-bottom:6px;background:linear-gradient(90deg,#ffffff,#f0b90b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.pro-title{font-family:var(--fn);font-size:28px;font-weight:800;margin-bottom:6px;background:linear-gradient(90deg,#ffffff,#f0b90b);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .pro-sub{color:var(--tm);font-size:12px;margin-bottom:24px}
 .pro-features{list-style:none;margin-bottom:24px;display:flex;flex-direction:column;gap:8px}
 .pro-features li{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--tx)}
@@ -1182,8 +1182,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
    ═══════════════════════════════════════════════════════════ */
 
 /* ═══════════ PRO SUBSCRIPTION LOGIC ═══════════ */
-const RAZORPAY_MONTHLY = 'https://rzp.io/rzp/YOUR_MONTHLY_LINK'; // Replace after Razorpay signup
-const RAZORPAY_YEARLY  = 'https://rzp.io/rzp/YOUR_YEARLY_LINK';  // Replace after Razorpay signup
+const RAZORPAY_MONTHLY = 'https://razorpay.me/@pranaveknathraut'; // ₹830/month
+const RAZORPAY_YEARLY  = 'https://razorpay.me/@pranaveknathraut'; // ₹6,600/year
 // Secret access code (change this to your own code before publishing)
 const PRO_ACCESS_CODE = 'ALTSCALP2024PRO';
 
@@ -1200,7 +1200,11 @@ function selPlan(plan) {
   document.getElementById('plan-monthly').classList.toggle('sel', plan === 'monthly');
   document.getElementById('plan-yearly').classList.toggle('sel', plan === 'yearly');
   const link = plan === 'yearly' ? RAZORPAY_YEARLY : RAZORPAY_MONTHLY;
-  document.getElementById('pro-pay-link').href = link;
+  const btn = document.getElementById('pro-pay-link');
+  btn.href = link;
+  btn.textContent = plan === 'yearly'
+    ? 'Pay ₹6,600/year via Razorpay →'
+    : 'Pay ₹830/month via Razorpay →';
 }
 function handleProPayClick() {
   // After payment, user will use access code to activate
