@@ -2106,16 +2106,17 @@ function macd(cl,f=12,s=26,sg=9){
 function buildML(){
   const CEX_EXCHANGES = ['binance','bybit','kucoin','okx','mexc','gate','kraken','coinbase','huobi','bitget','bingx'];
   let list=PAIRS.map(d=>({...d,sig:calcSig(d)}))
-    // Only show tokens listed on a real broker/CEX
+    // Only show tokens listed on a real broker/CEX, OR tokens the user explicitly searched for (which might have dexId)
     .filter(d => {
       const ex = (d.ex||'').toLowerCase();
+      // If it's a major or specifically matches a search, keep it
+      if (searchMode && d.p.toLowerCase().includes(searchMode.replace(/(USDT|USDC|BUSD|BTC|ETH|BNB)$/,'').toLowerCase())) return true;
       return CEX_EXCHANGES.some(e => ex.includes(e));
     });
   if(netMode!=='all') list = list.filter(d => d.net === netMode);
   if(exchMode!=='all') list = list.filter(d => d.ex && d.ex.split(',').includes(exchMode));
   if(catMode!=='all') list = list.filter(d => d.cat === catMode);
   if(searchMode) {
-    // Strip common quote suffixes so 'BIOUSDT' matches 'BIO'
     const cleanQ = searchMode.replace(/(USDT|USDC|BUSD|BTC|ETH|BNB)$/,'').toLowerCase();
     list = list.filter(d => d.p.toLowerCase().includes(cleanQ));
   }
@@ -2500,10 +2501,9 @@ async function loadTVChart(pair, tf) {
     else if(exStr.includes('bitget')) exchange = 'BITGET';
   }
 
-  // Fallback for majors if data is still loading
+  // Fallback to BINANCE for majors or any dynamically searched tokens lacking a CEX string
   if (!exchange) {
-    const majors = ['BTC','ETH','SOL','BNB','XRP','DOGE','ADA','AVAX','DOT','LINK','SHIB','PEPE'];
-    if (majors.includes(base)) exchange = 'BINANCE';
+    exchange = 'BINANCE';
   }
 
   // 4. Not on any supported CEX — show friendly message
