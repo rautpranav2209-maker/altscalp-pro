@@ -437,7 +437,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
         <div class="pro-plan-save">Save 30% 🎉</div>
       </div>
     </div>
-    <a id="pro-pay-link" href="https://razorpay.com/payment-link/YOUR_RAZORPAY_MONTHLY_LINK" target="_blank" class="pro-pay-btn" onclick="handleProPayClick()">Continue with Razorpay →</a>
+    <a id="pro-pay-link" href="https://razorpay.me/@pranaveknathraut" target="_blank" class="pro-pay-btn" onclick="handleProPayClick()">Pay ₹580/month via Razorpay →</a>
     <div class="pro-note">Already subscribed? <span style="color:var(--a);cursor:pointer" onclick="activatePro()">Enter access code</span></div>
   </div>
 </div>
@@ -1239,6 +1239,7 @@ let selectedPlan = 'monthly';
 
 function openProModal() {
   document.getElementById('pro-modal').style.display = 'flex';
+  selPlan('monthly'); // Initialize with default plan
 }
 function closeProModal() {
   document.getElementById('pro-modal').style.display = 'none';
