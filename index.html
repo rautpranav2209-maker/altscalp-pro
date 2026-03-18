@@ -469,29 +469,20 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
         <span>Drag dot <span style="color:var(--a)">→ move</span></span>
       </div>
     </div>
-    <!-- Canvas stack -->
-    <div style="flex:1;display:flex;flex-direction:column;min-height:0;position:relative">
-      <div class="chart-panel" style="flex:4" id="main-chart-panel">
-        <canvas id="tv-canvas"></canvas>
-        <div class="sig-overlay" id="csig-overlay">
-          <div style="font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--tm);margin-bottom:3px">AI Signal</div>
-          <div style="font-family:var(--fn);font-size:20px;font-weight:800" id="csig-val">—</div>
-          <div style="font-size:10px;margin-top:1px" id="csig-lbl">—</div>
-        </div>
-        <div class="crosshair-info" id="ch-info"></div>
+    <!-- TradingView Widget -->
+    <div style="flex:1;min-height:0;position:relative">
+      <div id="tv-widget-container" style="width:100%;height:100%"></div>
+      <!-- Keep hidden canvas elements so existing JS doesn't crash -->
+      <div id="main-chart-panel" style="display:none"><canvas id="tv-canvas"></canvas></div>
+      <div id="vol-sub" style="display:none"><canvas id="vol-canvas"></canvas></div>
+      <div id="rsi-sub" style="display:none"><canvas id="rsi-canvas"></canvas></div>
+      <div id="macd-sub" style="display:none"><canvas id="macd-canvas"></canvas></div>
+      <div class="sig-overlay" id="csig-overlay" style="z-index:10">
+        <div style="font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--tm);margin-bottom:3px">AI Signal</div>
+        <div style="font-family:var(--fn);font-size:20px;font-weight:800" id="csig-val">—</div>
+        <div style="font-size:10px;margin-top:1px" id="csig-lbl">—</div>
       </div>
-      <div id="vol-sub" style="flex:0.65;border-top:1px solid var(--b1);position:relative;min-height:0">
-        <canvas id="vol-canvas"></canvas>
-        <div class="sub-label">Volume</div>
-      </div>
-      <div id="rsi-sub" style="flex:0.65;border-top:1px solid var(--b1);position:relative;min-height:0">
-        <canvas id="rsi-canvas"></canvas>
-        <div class="sub-label">RSI 14</div>
-      </div>
-      <div id="macd-sub" style="flex:0.65;border-top:1px solid var(--b1);position:relative;min-height:0">
-        <canvas id="macd-canvas"></canvas>
-        <div class="sub-label">MACD</div>
-      </div>
+      <div class="crosshair-info" id="ch-info" style="display:none"></div>
     </div>
   </div>
 
@@ -1972,17 +1963,15 @@ function selPair(pair){
   document.getElementById('of-pair-lbl').textContent=pair+'/USDT';
   document.getElementById('ov-pair').textContent=pair+'/USDT';
   const pd2=PAIRS.find(d=>d.p===pair);
-  if(pd2){document.getElementById('of-price').value=fpc(pd2.price,pair);updateOFCalc()}
-  // Show simulated chart immediately (fast feedback)
+  if(pd2){document.getElementById('of-price').value=fpc(pd2.price,pair);updateOFCalc();}
+  // Update cData for the order panel tick logic
   cData=genC(pair,cTF);
-  updSigOverlay();renderChart();
-  // Then replace with real data asynchronously
+  updSigOverlay();
+  // Update TradingView widget with new symbol
+  if(typeof loadTVWidget === 'function') loadTVWidget(pair, cTF);
+  // Update prices with DexScreener
   fetchRealCandles(pair, cTF).then(realData => {
-    if(realData && realData.length > 5 && cPair === pair) {
-      cData = realData;
-      renderChart();
-      showToast('✓ Real price data loaded', 'success', 1500);
-    }
+    if(realData && realData.length > 5 && cPair === pair) cData = realData;
   });
 }
 
@@ -2240,25 +2229,78 @@ function updateScannerPrices(){
   });
 }
 
+/* ═══════════ TRADINGVIEW WIDGET CHART ═══════════ */
+let tvWidget = null;
+let tvSymbol = 'BINANCE:SOLUSDT';
+let tvInterval = '1'; // TradingView interval
+
+// TradingView interval mapping
+const TV_INTERVALS = {'1m':'1','5m':'5','15m':'15','1h':'60','4h':'240','1d':'D'};
+
+// Map pair symbol to best exchange prefix on TradingView
+function getTVSymbol(pair){
+  const sym = pair.toUpperCase().replace(/(USDT|USDC|BUSD)$/,'')+'USDT';
+  // Try Binance first (most liquid), fallback to BYBIT then KUCOIN
+  const binancePairs = ['BTC','ETH','BNB','SOL','DOGE','SHIB','PEPE','ADA','XRP','AVAX','DOT','MATIC','LINK','UNI','AAVE','ARB','OP','NEAR','APT','SUI','FET','RNDR','IMX','INJ','FTM','WIF','BONK'];
+  const sym2 = sym.replace('USDT','');
+  if(binancePairs.includes(sym2)) return `BINANCE:${sym}`;
+  return `BYBIT:${sym}`;
+}
+
 function initChart(){
-  mC=document.getElementById('tv-canvas');vC=document.getElementById('vol-canvas');
-  rC=document.getElementById('rsi-canvas');dC=document.getElementById('macd-canvas');
-  if(!mC)return;
-  mX=mC.getContext('2d');vX=vC?.getContext('2d');rX=rC?.getContext('2d');dX=dC?.getContext('2d');
-  sizeCanvases();
-  window.addEventListener('resize',()=>{sizeCanvases();renderChart()});
-  mC.addEventListener('mousemove',onMove);
-  mC.addEventListener('mouseleave',()=>{hovCI=-1;document.getElementById('ch-info').style.display='none';renderChart()});
-  mC.addEventListener('click',onClick);
-  mC.addEventListener('wheel',e=>{cZoom=Math.max(20,Math.min(300,cZoom+(e.deltaY>0?8:-8)));renderChart()},{passive:true});
-  mC.addEventListener('mousedown',onDragStart);
-  document.addEventListener('mousemove',onDragMove);
-  document.addEventListener('mouseup',()=>{dragging=false;dragObj=null});
-  cData=genC(cPair,cTF);
-  buildML();updSigOverlay();renderOrders();renderHist();updCapDisplay();refreshOF();setOS('long');
-  if(tkr)clearInterval(tkr);
-  tkr=setInterval(tick2,800);
-  renderChart();
+  // Keep cData alive for the order panel tick logic
+  cData = genC(cPair, cTF);
+  buildML(); updSigOverlay(); renderOrders(); renderHist(); updCapDisplay(); refreshOF(); setOS('long');
+  if(tkr) clearInterval(tkr);
+  tkr = setInterval(tick2, 800);
+  
+  // Load TradingView Widget
+  loadTVWidget(cPair, cTF);
+}
+
+function loadTVWidget(pair, tf) {
+  const container = document.getElementById('tv-widget-container');
+  if(!container) return;
+  container.innerHTML = '';
+  
+  tvSymbol = getTVSymbol(pair);
+  tvInterval = TV_INTERVALS[tf] || '15';
+  
+  // Load TradingView script if not already loaded
+  const init = () => {
+    container.innerHTML = '';
+    new TradingView.widget({
+      autosize: true,
+      symbol: tvSymbol,
+      interval: tvInterval,
+      timezone: 'Etc/UTC',
+      theme: 'dark',
+      style: '1',
+      locale: 'en',
+      toolbar_bg: '#0d1117',
+      enable_publishing: false,
+      hide_side_toolbar: false,
+      allow_symbol_change: true,
+      studies: ['RSI@tv-basicstudies','MACD@tv-basicstudies','BB@tv-basicstudies'],
+      container_id: 'tv-widget-container',
+      overrides: {
+        'paneProperties.background': '#0d1117',
+        'paneProperties.backgroundType': 'solid',
+        'paneProperties.vertGridProperties.color': 'rgba(255,255,255,0.03)',
+        'paneProperties.horzGridProperties.color': 'rgba(255,255,255,0.03)',
+        'symbolWatermarkProperties.transparency': 90
+      }
+    });
+  };
+  
+  if(typeof TradingView !== 'undefined') {
+    init();
+  } else {
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/tv.js';
+    script.onload = init;
+    document.head.appendChild(script);
+  }
 }
 
 function sizeCanvases(){
@@ -2564,7 +2606,7 @@ function togInd(ind,el){
 function setTF(tf,el){
   cTF=tf;cOff=0;
   document.querySelectorAll('.chart-toolbar .tbar-btn').forEach(b=>{if(['1m','5m','15m','1h','4h','1d'].includes(b.textContent))b.classList.remove('active')});
-  el.classList.add('active');cData=genC(cPair,tf);renderChart();
+  el.classList.add('active');cData=genC(cPair,tf);if(typeof loadTVWidget==='function')loadTVWidget(cPair,tf);
 }
 function setCT(type,el){
   cType=type;
