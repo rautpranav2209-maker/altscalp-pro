@@ -1875,8 +1875,15 @@ function setNet(m,el){netMode=m;document.querySelectorAll('.net-pill').forEach(e
 function applyFilters(){
   exchMode=document.getElementById('exch-filter').value;
   catMode=document.getElementById('cat-filter').value;
-  searchMode=document.getElementById('search-filter').value;
+  searchMode=document.getElementById('search-filter').value.trim().toUpperCase();
   buildML();
+  
+  if(searchMode.length >= 2) {
+    const list = PAIRS.filter(d=>d.p.includes(searchMode));
+    if(list.length === 0 && typeof isSearching !== 'undefined' && !isSearching) {
+      searchCoinGecko(searchMode);
+    }
+  }
 }
 function selPair(pair){
   cPair=pair;cOff=0;
