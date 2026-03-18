@@ -1767,7 +1767,19 @@ setInterval(tick,1000);
 
 const PDEC={SOL:2,AVAX:2,DOT:3,MATIC:4,LINK:2,DOGE:5,SHIB:8,PEPE:8,FLOKI:7,BONK:8,UNI:3,AAVE:2,CRV:4,SNX:3,SUSHI:3,FET:4,RNDR:2,TAO:0,WLD:4,AGIX:4,OCEAN:4,AXS:2,GALA:5,NOT:6,IMX:2,SAND:4,MANA:4,ARB:4,OP:3,LRC:5,METIS:2,BOBA:4,PYTH:4,W:4,ZRO:2,EIGEN:2,LDO:2,RPL:2};
 function pd(p){return PDEC[p]||2}
-function fpc(v,pair){return(+v).toFixed(pd(pair))}
+// Smart price display: auto-scale decimal places and use M/K for large numbers
+function fpc(v,pair){
+  const n = +v;
+  if(isNaN(n)) return '--';
+  if(n >= 1e6)  return '$'+(n/1e6).toFixed(3)+'M';
+  if(n >= 1e3)  return '$'+(n/1e3).toFixed(2)+'K';
+  if(n >= 100)  return n.toFixed(2);
+  if(n >= 1)    return n.toFixed(4);
+  if(n >= 0.01) return n.toFixed(5);
+  if(n >= 0.0001) return n.toFixed(6);
+  if(n >= 0.000001) return n.toFixed(8);
+  return n.toExponential(4);
+}
 function fq(v){return v>=1e6?(v/1e6).toFixed(2)+'M':v>=1e3?(v/1e3).toFixed(1)+'K':(+v).toFixed(0)}
 
 let cPair='SOL',cTF='1m',cType='candle',cBuilt=false;
