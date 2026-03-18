@@ -1968,7 +1968,7 @@ function selPair(pair){
   cData=genC(pair,cTF);
   updSigOverlay();
   // Update TradingView widget with new symbol
-  if(typeof loadTVWidget === 'function') loadTVWidget(pair, cTF);
+  if(typeof loadLWChart === 'function') ensureLWC(() => loadLWChart(pair, cTF));
   // Update prices with DexScreener
   fetchRealCandles(pair, cTF).then(realData => {
     if(realData && realData.length > 5 && cPair === pair) cData = realData;
@@ -2229,78 +2229,107 @@ function updateScannerPrices(){
   });
 }
 
-/* ═══════════ TRADINGVIEW WIDGET CHART ═══════════ */
-let tvWidget = null;
-let tvSymbol = 'BINANCE:SOLUSDT';
-let tvInterval = '1'; // TradingView interval
+/* ═══════════ LIGHTWEIGHT CHARTS + BINANCE REAL DATA ═══════════ */
+let lwChart = null, lwCandles = null, lwVolume = null;
 
-// TradingView interval mapping
-const TV_INTERVALS = {'1m':'1','5m':'5','15m':'15','1h':'60','4h':'240','1d':'D'};
-
-// Map pair symbol to best exchange prefix on TradingView
-function getTVSymbol(pair){
-  const sym = pair.toUpperCase().replace(/(USDT|USDC|BUSD)$/,'')+'USDT';
-  // Try Binance first (most liquid), fallback to BYBIT then KUCOIN
-  const binancePairs = ['BTC','ETH','BNB','SOL','DOGE','SHIB','PEPE','ADA','XRP','AVAX','DOT','MATIC','LINK','UNI','AAVE','ARB','OP','NEAR','APT','SUI','FET','RNDR','IMX','INJ','FTM','WIF','BONK'];
-  const sym2 = sym.replace('USDT','');
-  if(binancePairs.includes(sym2)) return `BINANCE:${sym}`;
-  return `BYBIT:${sym}`;
+// Load Lightweight Charts library from CDN
+function ensureLWC(cb) {
+  if(typeof LightweightCharts !== 'undefined') { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js';
+  s.onload = cb;
+  document.head.appendChild(s);
 }
 
 function initChart(){
-  // Keep cData alive for the order panel tick logic
   cData = genC(cPair, cTF);
   buildML(); updSigOverlay(); renderOrders(); renderHist(); updCapDisplay(); refreshOF(); setOS('long');
   if(tkr) clearInterval(tkr);
   tkr = setInterval(tick2, 800);
-  
-  // Load TradingView Widget
-  loadTVWidget(cPair, cTF);
+  ensureLWC(() => loadLWChart(cPair, cTF));
 }
 
-function loadTVWidget(pair, tf) {
+async function loadLWChart(pair, tf) {
   const container = document.getElementById('tv-widget-container');
   if(!container) return;
-  container.innerHTML = '';
-  
-  tvSymbol = getTVSymbol(pair);
-  tvInterval = TV_INTERVALS[tf] || '15';
-  
-  // Load TradingView script if not already loaded
-  const init = () => {
-    container.innerHTML = '';
-    new TradingView.widget({
-      autosize: true,
-      symbol: tvSymbol,
-      interval: tvInterval,
-      timezone: 'Etc/UTC',
-      theme: 'dark',
-      style: '1',
-      locale: 'en',
-      toolbar_bg: '#0d1117',
-      enable_publishing: false,
-      hide_side_toolbar: false,
-      allow_symbol_change: true,
-      studies: ['RSI@tv-basicstudies','MACD@tv-basicstudies','BB@tv-basicstudies'],
-      container_id: 'tv-widget-container',
-      overrides: {
-        'paneProperties.background': '#0d1117',
-        'paneProperties.backgroundType': 'solid',
-        'paneProperties.vertGridProperties.color': 'rgba(255,255,255,0.03)',
-        'paneProperties.horzGridProperties.color': 'rgba(255,255,255,0.03)',
-        'symbolWatermarkProperties.transparency': 90
-      }
-    });
-  };
-  
-  if(typeof TradingView !== 'undefined') {
-    init();
-  } else {
-    const script = document.createElement('script');
-    script.src = 'https://s3.tradingview.com/tv.js';
-    script.onload = init;
-    document.head.appendChild(script);
+
+  // Destroy existing chart
+  if(lwChart) { lwChart.remove(); lwChart = null; lwCandles = null; lwVolume = null; }
+  container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#4fa3ff;font-size:13px;letter-spacing:.05em">Loading real market data...</div>';
+
+  // Fetch real OHLCV from Binance (CORS enabled, no key needed)
+  const intervalMap = {'1m':'1m','5m':'5m','15m':'15m','1h':'1h','4h':'4h','1d':'1d'};
+  const interval = intervalMap[tf] || '15m';
+  const symbol = pair.toUpperCase().replace(/(USDT|USDC|BUSD)$/,'') + 'USDT';
+
+  let rows = [];
+  try {
+    const resp = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=500`);
+    if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    rows = await resp.json();
+    if(!Array.isArray(rows) || rows.length < 5) throw new Error('no data');
+  } catch(e) {
+    console.warn('Binance fetch failed', e.message);
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:8px;color:var(--tm)">
+      <div style="font-size:24px">📊</div>
+      <div style="font-size:12px">DEX token — simulated chart</div>
+      <div style="font-size:10px;color:var(--td)">${symbol} not on Binance</div>
+    </div>`;
+    return;
   }
+
+  container.innerHTML = '';
+
+  const candles = rows.map(r => ({time: r[0]/1000, open: +r[1], high: +r[2], low: +r[3], close: +r[4]}));
+  const volumes = rows.map(r => ({time: r[0]/1000, value: +r[5], color: +r[4] >= +r[1] ? 'rgba(0,229,160,0.4)' : 'rgba(255,69,96,0.4)'}));
+
+  // Update OHLCV bar with latest real candle
+  const last = candles[candles.length-1];
+  const last2 = candles[candles.length-2];
+  if(last) {
+    document.getElementById('ov-o').textContent = fpc(last.open, pair);
+    document.getElementById('ov-h').textContent = fpc(last.high, pair);
+    document.getElementById('ov-l').textContent = fpc(last.low, pair);
+    document.getElementById('ov-c').textContent = fpc(last.close, pair);
+    const chg = ((last.close - last2?.close)/last2?.close*100||0).toFixed(2);
+    const ce = document.getElementById('ov-chg'); ce.textContent = (chg>=0?'+':'')+chg+'%'; ce.style.color = chg>=0?'#00e5a0':'#ff4560';
+    // Update real price in PAIRS
+    const pd2 = PAIRS.find(d => d.p === pair);
+    if(pd2) pd2.price = last.close;
+  }
+
+  // Create chart
+  lwChart = LightweightCharts.createChart(container, {
+    width: container.clientWidth,
+    height: container.clientHeight,
+    layout: {background:{color:'#0d1117'}, textColor:'#8b949e'},
+    grid: {vertLines:{color:'rgba(255,255,255,0.04)'}, horzLines:{color:'rgba(255,255,255,0.04)'}},
+    crosshair: {mode: LightweightCharts.CrosshairMode.Normal},
+    rightPriceScale: {borderColor:'rgba(255,255,255,0.1)'},
+    timeScale: {borderColor:'rgba(255,255,255,0.1)', timeVisible:true, secondsVisible:false},
+    handleScale: {mouseWheel:true, pinch:true}
+  });
+
+  lwCandles = lwChart.addCandlestickSeries({
+    upColor:'#00e5a0', downColor:'#ff4560',
+    borderUpColor:'#00e5a0', borderDownColor:'#ff4560',
+    wickUpColor:'rgba(0,229,160,0.6)', wickDownColor:'rgba(255,69,96,0.6)'
+  });
+  lwCandles.setData(candles);
+
+  lwVolume = lwChart.addHistogramSeries({
+    priceFormat:{type:'volume'},
+    priceScaleId:'vol',
+    scaleMargins:{top:0.85, bottom:0}
+  });
+  lwVolume.setData(volumes);
+  lwChart.timeScale().fitContent();
+
+  // Resize handler
+  const ro = new ResizeObserver(() => { if(lwChart) lwChart.applyOptions({width:container.clientWidth, height:container.clientHeight}); });
+  ro.observe(container);
+
+  showToast('✓ Real Binance data loaded for ' + symbol, 'success', 2000);
 }
 
 function sizeCanvases(){
@@ -2606,7 +2635,7 @@ function togInd(ind,el){
 function setTF(tf,el){
   cTF=tf;cOff=0;
   document.querySelectorAll('.chart-toolbar .tbar-btn').forEach(b=>{if(['1m','5m','15m','1h','4h','1d'].includes(b.textContent))b.classList.remove('active')});
-  el.classList.add('active');cData=genC(cPair,tf);if(typeof loadTVWidget==='function')loadTVWidget(cPair,tf);
+  el.classList.add('active');cData=genC(cPair,tf);if(typeof loadLWChart==='function')ensureLWC(()=>loadLWChart(cPair,tf));
 }
 function setCT(type,el){
   cType=type;
