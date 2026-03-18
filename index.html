@@ -2476,33 +2476,30 @@ async function loadTVChart(pair, tf) {
   const intervals = {'1m':'1','5m':'5','15m':'15','1h':'60','4h':'240','1d':'D'};
   const interval = intervals[tf] || '15';
 
-  // Show loading state
-  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#4fa3ff;font-size:13px;letter-spacing:.05em">📊 Loading ${base}/USDT chart...</div>`;
-
-  // 1. Check Binance first (fastest, most data)
+  // Find the exact exchange from our internal data to avoid TV 'Invalid Symbol'
   let exchange = null;
-  try {
-    const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${sym}`, {signal:AbortSignal.timeout(3000)});
-    if(r.ok) exchange = 'BINANCE';
-  } catch(e) {}
-
-  // 2. Try Bybit
-  if(!exchange) {
-    try {
-      const r = await fetch(`https://api.bybit.com/v5/market/tickers?category=spot&symbol=${sym}`, {signal:AbortSignal.timeout(3000)});
-      if(r.ok) { const d=await r.json(); if(d?.result?.list?.length) exchange='BYBIT'; }
-    } catch(e) {}
+  const pd = PAIRS.find(d => d.p === base || d.p === pair || d.p === sym);
+  
+  if (pd && pd.ex) {
+    const exStr = pd.ex.toLowerCase();
+    if(exStr.includes('binance')) exchange = 'BINANCE';
+    else if(exStr.includes('bybit')) exchange = 'BYBIT';
+    else if(exStr.includes('kucoin')) exchange = 'KUCOIN';
+    else if(exStr.includes('okx')) exchange = 'OKX';
+    else if(exStr.includes('mexc')) exchange = 'MEXC';
+    else if(exStr.includes('gate')) exchange = 'GATEIO';
+    else if(exStr.includes('kraken')) exchange = 'KRAKEN';
+    else if(exStr.includes('coinbase')) exchange = 'COINBASE';
+    else if(exStr.includes('bitget')) exchange = 'BITGET';
   }
 
-  // 3. Try MEXC (lists most altcoins)
-  if(!exchange) {
-    try {
-      const r = await fetch(`https://api.mexc.com/api/v3/ticker/price?symbol=${sym}`, {signal:AbortSignal.timeout(3000)});
-      if(r.ok) exchange = 'MEXC';
-    } catch(e) {}
+  // Fallback for majors if data is still loading
+  if (!exchange) {
+    const majors = ['BTC','ETH','SOL','BNB','XRP','DOGE','ADA','AVAX','DOT','LINK','SHIB','PEPE'];
+    if (majors.includes(base)) exchange = 'BINANCE';
   }
 
-  // 4. Not on any CEX — show friendly message
+  // 4. Not on any supported CEX — show friendly message
   if(!exchange) {
     container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:10px;color:var(--tm)">
       <div style="font-size:32px">🦄</div>
