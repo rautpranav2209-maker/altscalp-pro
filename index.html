@@ -2421,9 +2421,24 @@ function renderOrders(){
 }
 
 function renderHist(){
-  document.getElementById('hist-totpnl').textContent=(HISTPNL>=0?'+':'')+' $'+Math.abs(HISTPNL).toFixed(2);
-  document.getElementById('hist-totpnl').style.color=HISTPNL>=0?'#00e5a0':'#ff4560';
-  if(!HIST.length){document.getElementById('hist-list').innerHTML='<div style="font-size:11px;color:var(--tm);padding:6px 13px 10px">No trades yet</div>';return;}
+  const isPro = localStorage.getItem('isPro') === 'true';
+  const histEl = document.getElementById('hist-list');
+  const tpEl = document.getElementById('hist-totpnl');
+  
+  tpEl.textContent=(HISTPNL>=0?'+':'')+' $'+Math.abs(HISTPNL).toFixed(2);
+  tpEl.style.color=HISTPNL>=0?'#00e5a0':'#ff4560';
+
+  if (!isPro) {
+    histEl.innerHTML = `<div style="padding:15px 12px;text-align:center;background:var(--bg);border-top:1px solid var(--b1)">
+      <div style="font-size:20px;margin-bottom:6px">🔒</div>
+      <div style="font-size:11px;color:var(--tx);font-weight:700;margin-bottom:4px">PRO Feature</div>
+      <div style="font-size:10px;color:var(--tm);line-height:1.4">Unlimited paper trading history is locked.</div>
+      <div style="margin-top:8px;font-size:10px;font-weight:700;color:var(--pu);cursor:pointer;" onclick="openProModal()">Upgrade to PRO →</div>
+    </div>`;
+    return;
+  }
+
+  if(!HIST.length){ histEl.innerHTML='<div style="font-size:11px;color:var(--tm);padding:6px 13px 10px">No trades yet</div>';return;}
   document.getElementById('hist-list').innerHTML=HIST.slice(0,10).map(o=>{
     const c=o.pnl>=0?'#00e5a0':'#ff4560';
     return`<div class="thistrow" style="padding:5px 13px">
@@ -2885,6 +2900,14 @@ function updSigOverlay(){
 }
 
 function showPage(id){
+  const isPro = localStorage.getItem('isPro') === 'true';
+  const proPages = ['analytics', 'microstructure', 'ml'];
+  
+  if(proPages.includes(id) && !isPro) {
+    openProModal();
+    return; // Block access completely
+  }
+
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
