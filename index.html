@@ -353,6 +353,47 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
   .pr{grid-template-columns:6px 70px 30px 50px 38px 40px 44px;font-size:10px}
   .ph{grid-template-columns:6px 70px 30px 50px 38px 40px 44px;font-size:8px}
 }
+
+/* ════════ MONETIZATION STYLES ════════ */
+/* Affiliate Banner */
+.aff-bar{background:linear-gradient(90deg,#0c1018,#111820,#0c1018);border-bottom:1px solid rgba(255,179,71,.15);padding:7px 20px;display:flex;align-items:center;gap:10px;overflow-x:auto;white-space:nowrap;}
+.aff-bar::-webkit-scrollbar{height:0}
+.aff-bar-lbl{font-size:9px;color:var(--a);text-transform:uppercase;letter-spacing:.1em;flex-shrink:0}
+.aff-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:4px;text-decoration:none;font-size:10px;font-weight:700;letter-spacing:.05em;transition:all .15s;border:1px solid;flex-shrink:0}
+.aff-btn:hover{transform:translateY(-1px);filter:brightness(1.15)}
+.aff-bnb{color:#f0b90b;border-color:rgba(240,185,11,.3);background:rgba(240,185,11,.08)}
+.aff-byb{color:#e8a838;border-color:rgba(232,168,56,.3);background:rgba(232,168,56,.08)}
+.aff-kuc{color:#26a17b;border-color:rgba(38,161,123,.3);background:rgba(38,161,123,.08)}
+.aff-okx{color:#4fa3ff;border-color:rgba(79,163,255,.3);background:rgba(79,163,255,.08)}
+.aff-mex{color:#ff4560;border-color:rgba(255,69,96,.3);background:rgba(255,69,96,.08)}
+.aff-sep{width:1px;height:14px;background:var(--b2);flex-shrink:0;margin:0 4px}
+/* AdSense slots */
+.ad-slot{background:var(--s2);border:1px dashed rgba(255,255,255,0.1);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--td);font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:6px;}
+.ad-slot.hide{display:none!important}
+/* PRO Modal */
+.pro-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);z-index:9000;display:flex;align-items:center;justify-content:center;animation:fadein .2s}
+.pro-modal{background:linear-gradient(145deg,#0c1520,#0d1117);border:1px solid rgba(255,179,71,.3);border-radius:16px;padding:36px;max-width:480px;width:90%;position:relative;box-shadow:0 0 60px rgba(255,179,71,.1)}
+.pro-modal-close{position:absolute;top:14px;right:18px;font-size:20px;cursor:pointer;color:var(--tm);transition:.15s}
+.pro-modal-close:hover{color:var(--tx)}
+.pro-badge{display:inline-block;background:linear-gradient(90deg,#f0b90b,#ff9800);color:#000;font-weight:800;font-size:10px;letter-spacing:.08em;padding:3px 10px;border-radius:20px;margin-bottom:12px}
+.pro-title{font-family:var(--fn);font-size:28px;font-weight:800;margin-bottom:6px;background:linear-gradient(90deg,#ffffff,#f0b90b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.pro-sub{color:var(--tm);font-size:12px;margin-bottom:24px}
+.pro-features{list-style:none;margin-bottom:24px;display:flex;flex-direction:column;gap:8px}
+.pro-features li{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--tx)}
+.pro-features li::before{content:'✓';color:var(--g);font-weight:700;width:16px;flex-shrink:0}
+.pro-plans{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.pro-plan{border:1px solid var(--b2);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:.15s;background:var(--s2)}
+.pro-plan:hover,.pro-plan.sel{border-color:var(--a);background:rgba(255,179,71,.06)}
+.pro-plan-price{font-family:var(--fn);font-size:22px;font-weight:800;color:var(--a)}
+.pro-plan-label{font-size:9px;color:var(--tm);text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
+.pro-plan-save{font-size:9px;color:var(--g);margin-top:4px;font-weight:700}
+.pro-pay-btn{display:block;width:100%;padding:13px;border-radius:10px;border:none;font-family:var(--fn);font-weight:700;font-size:14px;cursor:pointer;transition:.15s;letter-spacing:.04em;text-decoration:none;text-align:center;background:linear-gradient(90deg,#f0b90b,#ff9800);color:#000}
+.pro-pay-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.pro-note{font-size:10px;color:var(--td);text-align:center;margin-top:12px}
+/* Go PRO button */
+.go-pro-btn{padding:5px 14px;background:linear-gradient(90deg,#f0b90b,#ff9800);color:#000;border:none;border-radius:5px;font-family:var(--fn);font-weight:800;font-size:11px;cursor:pointer;letter-spacing:.04em;transition:.15s;white-space:nowrap}
+.go-pro-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.go-pro-btn.pro-active{background:linear-gradient(90deg,#00e5a0,#00b87a);color:#000}
 </style>
 </head>
 <body>
@@ -360,6 +401,55 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 <div class="toast-container" id="toast-container"></div>
 <!-- Modal container -->
 <div id="modal-root"></div>
+
+<!-- ══════════ PRO SUBSCRIPTION MODAL ══════════ -->
+<div class="pro-modal-bg" id="pro-modal" style="display:none">
+  <div class="pro-modal">
+    <span class="pro-modal-close" onclick="closeProModal()">✕</span>
+    <div class="pro-badge">⚡ UPGRADE TO PRO</div>
+    <div class="pro-title">AltScalp PRO</div>
+    <div class="pro-sub">Remove all ads and unlock the full trading experience</div>
+    <ul class="pro-features">
+      <li>No ads — completely clean interface</li>
+      <li>Priority signal alerts (real-time)</li>
+      <li>Advanced AI/ML scanner filters</li>
+      <li>Unlimited paper trade history</li>
+      <li>Early access to new features</li>
+    </ul>
+    <div class="pro-plans">
+      <div class="pro-plan sel" id="plan-monthly" onclick="selPlan('monthly')">
+        <div class="pro-plan-price">$9<span style="font-size:13px">.99</span></div>
+        <div class="pro-plan-label">Per Month</div>
+        <div class="pro-plan-save">&nbsp;</div>
+      </div>
+      <div class="pro-plan" id="plan-yearly" onclick="selPlan('yearly')">
+        <div class="pro-plan-price">$79</div>
+        <div class="pro-plan-label">Per Year</div>
+        <div class="pro-plan-save">Save 34% 🎉</div>
+      </div>
+    </div>
+    <a id="pro-pay-link" href="https://razorpay.com/payment-link/YOUR_RAZORPAY_MONTHLY_LINK" target="_blank" class="pro-pay-btn" onclick="handleProPayClick()">Continue with Razorpay →</a>
+    <div class="pro-note">Already subscribed? <span style="color:var(--a);cursor:pointer" onclick="activatePro()">Enter access code</span></div>
+  </div>
+</div>
+
+<!-- ══════════ AFFILIATE BANNER ══════════ -->
+<div class="aff-bar" id="aff-bar">
+  <span class="aff-bar-lbl">⚡ Trade on</span>
+  <div class="aff-sep"></div>
+  <a class="aff-btn aff-bnb" href="https://www.binance.com/en/register?ref=YOUR_BINANCE_REF" target="_blank" rel="noopener">🟡 Binance — Up to 40% Fee Cashback</a>
+  <div class="aff-sep"></div>
+  <a class="aff-btn aff-byb" href="https://www.bybit.com/en/register?affiliate_id=YOUR_BYBIT_REF" target="_blank" rel="noopener">🟠 Bybit — Up to 30% Rebate</a>
+  <div class="aff-sep"></div>
+  <a class="aff-btn aff-kuc" href="https://www.kucoin.com/r/YOUR_KUCOIN_REF" target="_blank" rel="noopener">🟢 KuCoin — Up to 40% Commission</a>
+  <div class="aff-sep"></div>
+  <a class="aff-btn aff-okx" href="https://www.okx.com/join/YOUR_OKX_REF" target="_blank" rel="noopener">🔵 OKX — Up to 30% Bonus</a>
+  <div class="aff-sep"></div>
+  <a class="aff-btn aff-mex" href="https://www.mexc.com/register?inviteCode=YOUR_MEXC_REF" target="_blank" rel="noopener">🔴 MEXC — Up to 50% Fee Back</a>
+</div>
+
+<!-- Google AdSense Script (replace YOUR_ADSENSE_ID with your publisher ID) -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR_ADSENSE_ID" crossorigin="anonymous"></script>
 
 <!-- NAV -->
 <nav class="nav">
@@ -377,6 +467,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
     <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tm)"><div class="live-dot"></div>Live</div>
     <div class="risk-meter" id="risk-status">Risk: OK</div>
     <div style="font-size:11px;color:var(--tx)" id="clk">--:--:--</div>
+    <button class="go-pro-btn" id="go-pro-btn" onclick="openProModal()">⚡ Go PRO</button>
   </div>
 </nav>
 
@@ -1089,6 +1180,66 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 /* ═══════════════════════════════════════════════════════════
    UTILITY SYSTEMS: Toast, Modal, Debounce, localStorage, etc.
    ═══════════════════════════════════════════════════════════ */
+
+/* ═══════════ PRO SUBSCRIPTION LOGIC ═══════════ */
+const RAZORPAY_MONTHLY = 'https://rzp.io/rzp/YOUR_MONTHLY_LINK'; // Replace after Razorpay signup
+const RAZORPAY_YEARLY  = 'https://rzp.io/rzp/YOUR_YEARLY_LINK';  // Replace after Razorpay signup
+// Secret access code (change this to your own code before publishing)
+const PRO_ACCESS_CODE = 'ALTSCALP2024PRO';
+
+let selectedPlan = 'monthly';
+
+function openProModal() {
+  document.getElementById('pro-modal').style.display = 'flex';
+}
+function closeProModal() {
+  document.getElementById('pro-modal').style.display = 'none';
+}
+function selPlan(plan) {
+  selectedPlan = plan;
+  document.getElementById('plan-monthly').classList.toggle('sel', plan === 'monthly');
+  document.getElementById('plan-yearly').classList.toggle('sel', plan === 'yearly');
+  const link = plan === 'yearly' ? RAZORPAY_YEARLY : RAZORPAY_MONTHLY;
+  document.getElementById('pro-pay-link').href = link;
+}
+function handleProPayClick() {
+  // After payment, user will use access code to activate
+  setTimeout(() => {
+    showToast('After payment, click "Enter access code" to activate PRO!', 'info', 5000);
+  }, 500);
+}
+function activatePro() {
+  const code = prompt('Enter your AltScalp PRO access code:');
+  if(code && code.trim().toUpperCase() === PRO_ACCESS_CODE) {
+    localStorage.setItem('altscalp_pro', '1');
+    applyProStatus();
+    closeProModal();
+    showToast('🎉 PRO activated! Ads removed. Enjoy AltScalp PRO!', 'success', 4000);
+  } else if(code) {
+    showToast('Invalid access code. Please try again.', 'error');
+  }
+}
+function applyProStatus() {
+  const isPro = localStorage.getItem('altscalp_pro') === '1';
+  // Hide/show affiliate banner and ad slots
+  const affBar = document.getElementById('aff-bar');
+  if(affBar) affBar.style.display = isPro ? 'none' : '';
+  document.querySelectorAll('.ad-slot').forEach(el => el.classList.toggle('hide', isPro));
+  // Update Go PRO button
+  const btn = document.getElementById('go-pro-btn');
+  if(btn) {
+    btn.textContent = isPro ? '⚡ PRO Active' : '⚡ Go PRO';
+    btn.classList.toggle('pro-active', isPro);
+    if(isPro) btn.onclick = () => showToast('You have an active PRO subscription!', 'success');
+    else btn.onclick = openProModal;
+  }
+}
+// Init monetization on page load
+window.addEventListener('DOMContentLoaded', () => {
+  applyProStatus();
+  // Init AdSense
+  try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch(e) {}
+});
 
 /* ── Toast Notification System ── */
 function showToast(msg, type='info', duration=3000) {
