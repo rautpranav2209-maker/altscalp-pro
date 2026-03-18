@@ -1464,32 +1464,39 @@ const DS_MAX_RETRIES = 3;
 async function fetchLiveListings() {
   if(dsRetryCount >= DS_MAX_RETRIES) return;
   try {
-    showToast('Fetching latest DEX tokens...', 'info', 2000);
-    // DexScreener doesn't have a top 250 endpoint, so we search for common high-volume pairs to start
-    const response = await fetch('https://api.dexscreener.com/latest/dex/search?q=USDT%20USDC%20WETH%20SOL');
+    showToast('Fetching live market data...', 'info', 2000);
+    // Start with our curated CEX static pairs
+    let liveList = [...STATIC_PAIRS];
+    
+    // Fetch live prices for top pairs from DexScreener
+    const response = await fetch('https://api.dexscreener.com/latest/dex/search?q=USDT%20USDC');
     if (!response.ok) {
       if(response.status === 429) { showToast('Rate limited — retrying shortly', 'warning'); return; }
       throw new Error(`HTTP error ${response.status}`);
     }
     const data = await response.json();
-    if(!data.pairs) throw new Error('No pairs returned');
+    
+    if(data.pairs) {
+      // Map live prices to our static list
+      data.pairs.forEach(p => {
+        const sym = p.baseToken.symbol.toUpperCase();
+        const existing = liveList.find(x => x.p === sym);
+        if(existing) {
+          existing.price = parseFloat(p.priceUsd);
+          existing.chg = p.priceChange?.h24 || existing.chg;
+          existing.vol = p.volume?.h24 || existing.vol;
+        }
+      });
+    }
 
-    // Filter to legit-looking pairs with decent volume
-    const topPairs = data.pairs
-      .filter(p => (p.volume && p.volume.h24 > 100000) || (p.liquidity && p.liquidity.usd > 50000))
-      .sort((a,b) => (b.volume?.h24 || 0) - (a.volume?.h24 || 0))
-      .slice(0, 100);
-
-    const live = topPairs.map(p => parseDexScreenerPair(p));
-
-    PAIRS = live;
+    PAIRS = liveList;
     dsRetryCount = 0;
     buildScanner(); buildCorrBars(); buildMTFTable();
     if (!PAIRS.some(p => p.p === activePair)) { activePair = PAIRS[0]?.p || 'BTC'; loadPair(activePair); }
-    showToast(`✓ Loaded ${live.length} DEX tokens`, 'success');
+    showToast(`✓ Loaded live market data`, 'success');
   } catch (error) {
     dsRetryCount++;
-    console.warn('DexScreener fetch failed:', error.message);
+    console.warn('Live fetch failed:', error.message);
     if(dsRetryCount >= DS_MAX_RETRIES) showToast('Using offline demo data', 'warning');
     PAIRS = STATIC_PAIRS; buildScanner(); buildCorrBars(); buildMTFTable();
   }
