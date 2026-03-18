@@ -1340,6 +1340,8 @@ function parseDexScreenerPair(p) {
     p: sym, 
     cat, 
     net: p.chainId, 
+    chainId: p.chainId,
+    pairAddress: p.pairAddress,
     ex: p.dexId, 
     price: parseFloat(p.priceUsd) || 0, 
     chg: +chg.toFixed(2),
@@ -1834,6 +1836,43 @@ function genC(pair,tf,n=260){
   return out;
 }
 
+/* ═══════════ REAL OHLCV CANDLE FETCH (DexScreener) ═══════════ */
+async function fetchRealCandles(pair, tf) {
+  const pd2 = PAIRS.find(d => d.p === pair);
+  if (!pd2 || !pd2.pairAddress || !pd2.chainId) {
+    // Static PAIR or no address — fall back to simulated data
+    return genC(pair, tf);
+  }
+
+  // DexScreener resolution mapping
+  const resMap = {'1m':'1m','5m':'5m','15m':'15m','1h':'1h','4h':'4h','1d':'1D'};
+  const res = resMap[tf] || '15m';
+
+  try {
+    const url = `https://api.dexscreener.com/latest/dex/candles/${pd2.chainId}/${pd2.pairAddress}?resolution=${res}&from=${Math.floor(Date.now()/1000)-86400*3}&to=${Math.floor(Date.now()/1000)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('candles HTTP ' + resp.status);
+    const data = await resp.json();
+
+    const candles = data.candles || data.c || data.data;
+    if (!candles || !candles.length) throw new Error('no candles');
+
+    return candles.map(c => {
+      const o = +c.open  || +c.o;
+      const h = +c.high  || +c.h;
+      const l = +c.low   || +c.l;
+      const cl= +c.close || +c.c;
+      const v = +c.volume|| +c.v || 0;
+      const t = (c.timestamp || c.time || c.t) * (c.timestamp > 1e12 ? 1 : 1000);
+      return {t, o, h, l, c: cl, v, bull: cl >= o};
+    }).filter(c => !isNaN(c.o) && !isNaN(c.c));
+
+  } catch(err) {
+    console.warn('Real candle fetch failed for', pair, '-', err.message, '— using simulated data');
+    return genC(pair, tf);
+  }
+}
+
 function ema(arr,p){const k=2/(p+1);let e=arr[0];return arr.map(v=>{e=v*k+e*(1-k);return e})}
 function bb(cl,p=20,s=2){
   return cl.map((_,i)=>{if(i<p)return null;const sl=cl.slice(i-p,i);const m=sl.reduce((a,b)=>a+b,0)/p;const sd=Math.sqrt(sl.reduce((a,b)=>a+(b-m)**2,0)/p);return{mid:m,up:m+s*sd,dn:m-s*sd}});
@@ -1904,12 +1943,21 @@ function applyFilters(){
 }
 function selPair(pair){
   cPair=pair;cOff=0;
-  cData=genC(pair,cTF);
   document.getElementById('of-pair-lbl').textContent=pair+'/USDT';
   document.getElementById('ov-pair').textContent=pair+'/USDT';
   const pd2=PAIRS.find(d=>d.p===pair);
   if(pd2){document.getElementById('of-price').value=fpc(pd2.price,pair);updateOFCalc()}
+  // Show simulated chart immediately (fast feedback)
+  cData=genC(pair,cTF);
   updSigOverlay();renderChart();
+  // Then replace with real data asynchronously
+  fetchRealCandles(pair, cTF).then(realData => {
+    if(realData && realData.length > 5 && cPair === pair) {
+      cData = realData;
+      renderChart();
+      showToast('✓ Real price data loaded', 'success', 1500);
+    }
+  });
 }
 
 function setCapital(){
