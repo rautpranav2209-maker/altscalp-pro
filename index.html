@@ -418,7 +418,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
     </ul>
     <div class="pro-plans">
       <div class="pro-plan sel" id="plan-monthly" onclick="selPlan('monthly')">
-        <div class="pro-plan-price">$6</div>
+        <div class="pro-plan-price">$7</div>
         <div class="pro-plan-label">Per Month</div>
         <div class="pro-plan-save">&nbsp;</div>
       </div>
@@ -1182,7 +1182,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
    ═══════════════════════════════════════════════════════════ */
 
 /* ═══════════ PRO SUBSCRIPTION LOGIC ═══════════ */
-const RAZORPAY_MONTHLY = 'https://razorpay.me/@pranaveknathraut'; // ₹500/month ($6)
+const RAZORPAY_MONTHLY = 'https://razorpay.me/@pranaveknathraut'; // ₹580/month ($7)
 const RAZORPAY_YEARLY  = 'https://razorpay.me/@pranaveknathraut'; // ₹4,150/year ($50)
 // Secret access code (change this to your own code before publishing)
 const PRO_ACCESS_CODE = 'ALTPRO#8821';
@@ -1204,7 +1204,7 @@ function selPlan(plan) {
   btn.href = link;
   btn.textContent = plan === 'yearly'
     ? 'Pay ₹4,150/year via Razorpay →'
-    : 'Pay ₹500/month via Razorpay →';
+    : 'Pay ₹580/month via Razorpay →';
 }
 function handleProPayClick() {
   // After payment, user will use access code to activate
