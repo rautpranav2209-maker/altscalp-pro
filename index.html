@@ -3551,16 +3551,16 @@
        ═══════════════════════════════════════════════════════════ */
 
     /* ══════════ SUPABASE AUTH ══════════ */
-    let supabase = null;
+    let sb = null; 
     const SB_URL = 'https://lvdwlztunfdibjwkrgjg.supabase.co';
     const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2ZHdsenR1bmZkaWJqd2tyZ2pnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDA2NjYsImV4cCI6MjA4OTUxNjY2Nn0.nCZimbluHNJgLrm93NN_xoWFwdkntGuDPwY2tMH7Kxo';
 
     function initSupabase() {
-      if (typeof supabasejs === 'undefined') return;
-      supabase = supabasejs.createClient(SB_URL, SB_KEY);
+      if (typeof supabase === 'undefined') return;
+      sb = supabase.createClient(SB_URL, SB_KEY);
       
       // Listen for auth changes
-      supabase.auth.onAuthStateChange((event, session) => {
+      sb.auth.onAuthStateChange((event, session) => {
         if (session) {
           document.getElementById('login-btn').style.display = 'none';
           document.getElementById('user-profile').style.display = 'flex';
@@ -3587,7 +3587,7 @@
       const pass = document.getElementById('signup-pass').value;
       if (!email || !pass) return showToast('Please enter both email and password', 'warning');
       
-      const { data, error } = await supabase.auth.signUp({ email, password: pass });
+      const { data, error } = await sb.auth.signUp({ email, password: pass });
       if (error) return showToast(error.message, 'error');
       showToast('Check your email for confirmation!', 'success');
       closeAuthModal();
@@ -3598,13 +3598,13 @@
       const pass = document.getElementById('login-pass').value;
       if (!email || !pass) return showToast('Please enter both email and password', 'warning');
 
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
       if (error) return showToast(error.message, 'error');
       closeAuthModal();
     }
 
     async function handleEmailLogout() {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await sb.auth.signOut();
       if (error) showToast(error.message, 'error');
       else showToast('Logged out successfully', 'info');
     }
