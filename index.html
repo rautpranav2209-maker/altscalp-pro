@@ -3599,7 +3599,14 @@
       if (!email || !pass) return showToast('Please enter both email and password', 'warning');
 
       const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-      if (error) return showToast(error.message, 'error');
+      if (error) {
+        if (error.message.toLowerCase().includes('confirm')) {
+          showToast('Email not confirmed! Please check your inbox or turn off "Confirm Email" in Supabase settings.', 'warning', 10000);
+        } else {
+          showToast(error.message, 'error');
+        }
+        return;
+      }
       closeAuthModal();
     }
 
