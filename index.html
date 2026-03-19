@@ -2333,7 +2333,7 @@
         <button class="auth-btn" style="background:var(--bl)" onclick="handleEmailSignup()">Create Account</button>
         <p class="auth-switch">Already have an account? <span onclick="toggleAuthView('login')">Sign In</span></p>
       </div>
-      <button onclick="closeAuthModal()" style="width:100%;background:none;border:none;color:var(--td);margin-top:20px;cursor:pointer;font-size:10px">CLOSE</button>
+      <button id="auth-close-btn" onclick="closeAuthModal()" style="width:100%;background:none;border:none;color:var(--td);margin-top:20px;cursor:pointer;font-size:10px;display:none">CLOSE</button>
     </div>
   </div>
 
@@ -3565,12 +3565,12 @@
           document.getElementById('login-btn').style.display = 'none';
           document.getElementById('user-profile').style.display = 'flex';
           document.getElementById('user-email').textContent = session.user.email;
-          showToast(`Logged in as ${session.user.email}`, 'info');
-          // Hide Go PRO if already pro (logic to be synced with DB later)
+          closeAuthModal(); // Hide modal when logged in
           applyProStatus(); 
         } else {
           document.getElementById('login-btn').style.display = 'block';
           document.getElementById('user-profile').style.display = 'none';
+          openAuthModal(); // Force open on load/logout
         }
       });
     }
