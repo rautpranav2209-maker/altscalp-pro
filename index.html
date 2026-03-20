@@ -3599,7 +3599,7 @@
         document.getElementById('login-btn').style.display = 'block';
         document.getElementById('user-profile').style.display = 'none';
         userData = null;
-        openAuthModal();
+        console.log("[Auth] User logged out");
       }
     });
   }
@@ -3709,12 +3709,17 @@
   }
 
   async function handleLogout() {
+    console.log("[Auth] handleLogout triggered");
     try {
       await firebase.auth().signOut();
       showToast('Logged out successfully', 'info');
       // Full reload to clear all states and prevent navigation issues
-      setTimeout(() => window.location.reload(), 1500);
+      setTimeout(() => {
+        console.log("[Auth] Reloading page...");
+        window.location.reload();
+      }, 1500);
     } catch (error) {
+      console.error("[Auth] Logout error:", error);
       showToast(error.message, 'error');
     }
   }
