@@ -3682,19 +3682,24 @@
         setTimeout(() => codeInput.style.borderColor = '', 1500);
       }
     }
-    function applyProStatus() {
-      const user = (typeof firebase !== 'undefined' && firebase.auth()) ? firebase.auth().currentUser : null;
-      let isPro = localStorage.getItem('altscalp_pro') === '1';
+    function checkProStatus() {
+      // 1. Check permanent PRO code activation
+      if (localStorage.getItem('altscalp_pro') === '1') return true;
 
-      // 24-Hour Free Trial Logic
-      if (user && !isPro) {
+      // 2. Check 24-Hour Free Trial for Firebase users
+      const user = (typeof firebase !== 'undefined' && firebase.auth()) ? firebase.auth().currentUser : null;
+      if (user) {
         const signupDate = new Date(user.metadata.creationTime);
         const now = new Date();
         const diffHours = (now - signupDate) / (1000 * 60 * 60);
-        if (diffHours < 24) {
-          isPro = true;
-        }
+        if (diffHours < 24) return true;
       }
+      return false;
+    }
+
+    function applyProStatus() {
+      const isPro = checkProStatus();
+      
       // Hide/show affiliate banner and ad slots
       const affBar = document.getElementById('aff-bar');
       if (affBar) affBar.style.display = isPro ? 'none' : '';
@@ -4265,8 +4270,7 @@
       document.getElementById('alert-count').textContent = +document.getElementById('alert-count').textContent + 1;
       
       // PRO: Desktop Notification
-      const isPro = localStorage.getItem('altscalp_pro') === '1';
-      if(isPro) triggerNotif(`${a.pair}/USDT ${isLong?'LONG':'SHORT'}`, a.msg);
+      if(checkProStatus()) triggerNotif(`${a.pair}/USDT ${isLong?'LONG':'SHORT'}`, a.msg);
     }
     function toggleSound(on) { soundOn = on; document.getElementById('sound-status').textContent = on ? 'ON' : 'OFF' }
     function togglePush(on) { if (on && 'Notification' in window) Notification.requestPermission() }
@@ -4920,7 +4924,7 @@
     }
 
     function renderHist() {
-      const isPro = localStorage.getItem('isPro') === 'true';
+      const isPro = checkProStatus();
       const histEl = document.getElementById('hist-list');
       const tpEl = document.getElementById('hist-totpnl');
 
@@ -5399,7 +5403,7 @@
     }
 
     function showPage(id) {
-      const isPro = localStorage.getItem('altscalp_pro') === '1';
+      const isPro = checkProStatus();
       const proPages = ['analytics', 'microstructure', 'ml'];
 
       if (proPages.includes(id) && !isPro) {
@@ -5466,8 +5470,7 @@
     }
 
     function updateWinRate() {
-      const isPro = localStorage.getItem('altscalp_pro') === '1';
-      if (!isPro) return;
+      if (!checkProStatus()) return;
       const total = HIST.length;
       if (total === 0) {
         document.getElementById('win-perc').textContent = '0%';
