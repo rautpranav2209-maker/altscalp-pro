@@ -3690,13 +3690,22 @@
     if (!email || !pass) return showToast('Please enter both email and password', 'warning');
 
     try {
-      await firebase.auth().createUserWithEmailAndPassword(email, pass);
+      const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
+      const user = cred.user;
+      
       trackEvent('sign_up', { method: 'email' });
+      
+      // CRITICAL: Await the profile creation before reloading the page!
+      // This prevents the page reload from cutting off the Firestore 'set' operation.
+      await syncUserProfile(user);
+      
       showToast('Welcome to AltScalp! 🎁 1-Day PRO Trial Activated.', 'success', 5000);
       closeAuthModal();
-      // Force reload ensures the full Firestore profile and Trial are active before any other code runs
-      setTimeout(() => window.location.reload(), 1500);
+      
+      // Delay reload slightly so the user can see the success toast
+      setTimeout(() => window.location.reload(), 2000);
     } catch (error) {
+      console.error("[Auth] Signup Error:", error);
       showToast(error.message, 'error');
     }
   }
