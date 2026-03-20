@@ -2307,18 +2307,18 @@
 
     <div class="plan-grid">
       <div class="plan-box sel" id="plan-monthly" onclick="selPlan('monthly')">
-        <div class="plan-price">₹1,499</div>
+        <div class="plan-price">$7</div>
         <div class="plan-dur">Per Month</div>
       </div>
       <div class="plan-box" id="plan-yearly" onclick="selPlan('yearly')">
-        <div class="plan-price">₹9,999</div>
+        <div class="plan-price">$50</div>
         <div class="plan-dur">Per Year</div>
-        <div class="plan-save">Save ₹7,989 🎉</div>
+        <div class="plan-save">Save $34 🎉</div>
       </div>
     </div>
 
     <button class="btn-primary" onclick="handleProPayClick()" id="pro-pay-btn">
-      <span id="pro-pay-btn-text">Unlock Full PRO for ₹1,499/mo →</span>
+      <span id="pro-pay-btn-text">Unlock Full PRO for $7/mo →</span>
     </button>
     
     <div style="margin-top:20px; text-align:center; display:flex; align-items:center; justify-content:center; gap:15px">
@@ -3701,8 +3701,8 @@
   /* ═══════════ PRO SUBSCRIPTION LOGIC ═══════════ */
   const RAZORPAY_KEY_ID = 'rzp_live_XXXXXXXXXXXXXX'; // Replace with real key
   const PLAN_PRICES = {
-    monthly: 149900, // ₹1499 in paise
-    yearly: 999900   // ₹9999 in paise
+    monthly: 700,  // $7 in cents
+    yearly: 5000   // $50 in cents
   };
 
   let selectedPlan = 'monthly';
@@ -3719,7 +3719,7 @@
     selectedPlan = plan;
     document.getElementById('plan-monthly').classList.toggle('sel', plan === 'monthly');
     document.getElementById('plan-yearly').classList.toggle('sel', plan === 'yearly');
-    const priceText = plan === 'yearly' ? '₹9,999/year' : '₹1,499/month';
+    const priceText = plan === 'yearly' ? '$50/year' : '$7/month';
     document.getElementById('pro-pay-btn-text').textContent = `Unlock Full PRO for ${priceText} →`;
   }
 
@@ -3733,7 +3733,7 @@
     const options = {
       key: RAZORPAY_KEY_ID,
       amount: PLAN_PRICES[selectedPlan],
-      currency: "INR",
+      currency: "USD",
       name: "AltScalp PRO",
       description: `Subscription: ${selectedPlan.toUpperCase()} Plan`,
       image: "https://altscalp-pro.vercel.app/logo.png",
