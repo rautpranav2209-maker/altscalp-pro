@@ -3839,20 +3839,23 @@
   }
 
   function checkProStatus() {
-    // 0. Instant Access Flag (Bypasses all latency for new signups)
-    if (sessionStorage.getItem('alt_new_signup_active') === '1') return true;
+    const user = firebase.auth().currentUser;
+    if (!user) return false;
 
-    // 1. Check Firestore Profile (Highest Priority)
-    if (userData && userData.isPro) {
-      if (userData.plan === 'trial') return true;
-      if (userData.expiryDate && userData.expiryDate.seconds * 1000 > Date.now()) return true;
+    // 1. GOLD STANDARD: 24-Hour Trial based on Auth Metadata (Cannot fail)
+    const creationTime = new Date(user.metadata.creationTime).getTime();
+    if (Date.now() - creationTime < 86400000) {
+      console.log("[Auth] Trial active via Auth Metadata");
+      return true;
     }
 
-    // 2. Immediate Hint (Local Storage) - Helps with sync latency
-    if (localStorage.getItem('alt_trial_active') === '1') return true;
-    if (localStorage.getItem('alt_pro_active') === '1') return true;
+    // 2. Firestore Sync (For Paid PRO or extended trials)
+    if (userData && userData.isPro) {
+      if (userData.expiryDate && userData.expiryDate.seconds * 1000 > Date.now()) return true;
+      if (userData.plan === 'pro') return true;
+    }
 
-    // 3. Legacy Code
+    // 3. Legacy Local Code
     if (localStorage.getItem('altscalp_pro') === '1') return true;
 
     return false;
