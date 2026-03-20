@@ -3575,6 +3575,17 @@
           document.getElementById('user-email').textContent = user.email;
           closeAuthModal(); 
           applyProStatus(); 
+
+          // Show Free Trial Notification
+          const isPermanentPro = localStorage.getItem('altscalp_pro') === '1';
+          if (!isPermanentPro) {
+            const signupDate = new Date(user.metadata.creationTime);
+            const now = new Date();
+            const diffHours = (now - signupDate) / (1000 * 60 * 60);
+            if (diffHours < 24) {
+              showToast(`🎁 24H Free Trial Active! Expires in ${Math.round(24 - diffHours)} hours.`, 'info', 8000);
+            }
+          }
         } else {
           document.getElementById('login-btn').style.display = 'block';
           document.getElementById('user-profile').style.display = 'none';
@@ -3672,7 +3683,18 @@
       }
     }
     function applyProStatus() {
-      const isPro = localStorage.getItem('altscalp_pro') === '1';
+      const user = (typeof firebase !== 'undefined' && firebase.auth()) ? firebase.auth().currentUser : null;
+      let isPro = localStorage.getItem('altscalp_pro') === '1';
+
+      // 24-Hour Free Trial Logic
+      if (user && !isPro) {
+        const signupDate = new Date(user.metadata.creationTime);
+        const now = new Date();
+        const diffHours = (now - signupDate) / (1000 * 60 * 60);
+        if (diffHours < 24) {
+          isPro = true;
+        }
+      }
       // Hide/show affiliate banner and ad slots
       const affBar = document.getElementById('aff-bar');
       if (affBar) affBar.style.display = isPro ? 'none' : '';
