@@ -3571,15 +3571,19 @@
         document.getElementById('user-profile').style.display = 'flex';
         document.getElementById('user-email').textContent = user.email;
         closeAuthModal();
+
+        // 1. INSTANT UI UPDATE (Use local Quad-Lock backup immediately)
+        applyProStatus();
         
-        // Sync Profile with Firestore (Don't let errors block the UI!)
+        // 2. BACKGROUND SYNC (Keep Firestore updated)
         try {
           await firebase.firestore().enableNetwork();
           await syncUserProfile(user);
         } catch (e) {
-          console.warn("[Auth] Sync failed (Offline?), using local Quad-Lock backup:", e.message);
+          console.warn("[Auth] Sync background error:", e.message);
         }
         
+        // 3. FINAL UI SYNC (Refresh once Firestore data is in)
         applyProStatus();
         showLoadingOverlay(false);
 
