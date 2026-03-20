@@ -3708,10 +3708,12 @@
     }
   }
 
-  async function handleEmailLogout() {
+  async function handleLogout() {
     try {
       await firebase.auth().signOut();
       showToast('Logged out successfully', 'info');
+      // Full reload to clear all states and prevent navigation issues
+      setTimeout(() => window.location.reload(), 1500);
     } catch (error) {
       showToast(error.message, 'error');
     }
