@@ -3699,10 +3699,10 @@
   }
 
   /* ═══════════ PRO SUBSCRIPTION LOGIC ═══════════ */
-  const RAZORPAY_KEY_ID = 'rzp_live_XXXXXXXXXXXXXX'; // Replace with real key
+  const RAZORPAY_KEY_ID = 'rzp_live_STYbFDrNrl1V0a'; // Live Production Key
   const PLAN_PRICES = {
-    monthly: 700,  // $7 in cents
-    yearly: 5000   // $50 in cents
+    monthly: 58800,  // $7 @ ₹84
+    yearly: 420000   // $50 @ ₹84
   };
 
   let selectedPlan = 'monthly';
@@ -3733,7 +3733,7 @@
     const options = {
       key: RAZORPAY_KEY_ID,
       amount: PLAN_PRICES[selectedPlan],
-      currency: "USD",
+      currency: "INR",
       name: "AltScalp PRO",
       description: `Subscription: ${selectedPlan.toUpperCase()} Plan`,
       image: "https://altscalp-pro.vercel.app/logo.png",
