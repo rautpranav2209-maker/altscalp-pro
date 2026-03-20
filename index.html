@@ -3572,8 +3572,14 @@
         document.getElementById('user-email').textContent = user.email;
         closeAuthModal();
         
-        // Sync Profile with Firestore
-        await syncUserProfile(user);
+        // Sync Profile with Firestore (Don't let errors block the UI!)
+        try {
+          await firebase.firestore().enableNetwork();
+          await syncUserProfile(user);
+        } catch (e) {
+          console.warn("[Auth] Sync failed (Offline?), using local Quad-Lock backup:", e.message);
+        }
+        
         applyProStatus();
         showLoadingOverlay(false);
 
