@@ -3671,8 +3671,13 @@
           if (userData.isPro) {
             await userRef.update({ isPro: false });
             userData.isPro = false;
+            localStorage.removeItem('alt_trial_active');
           }
+        } else {
+          localStorage.setItem('alt_trial_active', '1');
         }
+      } else if (userData.plan === 'pro') {
+        localStorage.setItem('alt_pro_active', '1');
       }
     }
   }
@@ -3696,8 +3701,10 @@
       trackEvent('sign_up', { method: 'email' });
       
       // CRITICAL: Await the profile creation before reloading the page!
-      // This prevents the page reload from cutting off the Firestore 'set' operation.
       await syncUserProfile(user);
+      
+      // Secondary Backup: Store trial in LOCAL STORAGE as an immediate hint for the next page load
+      localStorage.setItem('alt_trial_active', '1');
       
       showToast('Welcome to AltScalp! 🎁 1-Day PRO Trial Activated.', 'success', 5000);
       closeAuthModal();
@@ -3834,12 +3841,14 @@
     // 1. Check Firestore Profile (Highest Priority)
     if (userData && userData.isPro) {
       if (userData.plan === 'trial') return true;
-      if (userData.expiryDate) {
-        if (userData.expiryDate.seconds * 1000 > Date.now()) return true;
-      }
+      if (userData.expiryDate && userData.expiryDate.seconds * 1000 > Date.now()) return true;
     }
 
-    // 2. Legacy Local Code
+    // 2. Immediate Hint (Local Storage) - Helps with sync latency
+    if (localStorage.getItem('alt_trial_active') === '1') return true;
+    if (localStorage.getItem('alt_pro_active') === '1') return true;
+
+    // 3. Legacy Code
     if (localStorage.getItem('altscalp_pro') === '1') return true;
 
     return false;
