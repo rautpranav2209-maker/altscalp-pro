@@ -3703,8 +3703,9 @@
       // CRITICAL: Await the profile creation before reloading the page!
       await syncUserProfile(user);
       
-      // Secondary Backup: Store trial in LOCAL STORAGE as an immediate hint for the next page load
+      // Triple-Lock Protection:
       localStorage.setItem('alt_trial_active', '1');
+      sessionStorage.setItem('alt_new_signup_active', '1');
       
       showToast('Welcome to AltScalp! 🎁 1-Day PRO Trial Activated.', 'success', 5000);
       closeAuthModal();
@@ -3838,6 +3839,9 @@
   }
 
   function checkProStatus() {
+    // 0. Instant Access Flag (Bypasses all latency for new signups)
+    if (sessionStorage.getItem('alt_new_signup_active') === '1') return true;
+
     // 1. Check Firestore Profile (Highest Priority)
     if (userData && userData.isPro) {
       if (userData.plan === 'trial') return true;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'altscalp-v2';
+const CACHE_NAME = 'altscalp-v3';
 const ASSETS = [
   '/',
   '/index.html',
