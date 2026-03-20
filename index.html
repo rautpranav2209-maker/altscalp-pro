@@ -3685,6 +3685,7 @@
           }
         } else {
           localStorage.setItem('alt_trial_active', '1');
+          localStorage.setItem('alt_trial_start', start.toString());
         }
       } else if (userData.plan === 'pro') {
         localStorage.setItem('alt_pro_active', '1');
@@ -3852,34 +3853,34 @@
     const user = firebase.auth().currentUser;
     if (!user) return false;
 
+    const NOW = Date.now();
+    const DAY_MS = 86400000;
+
     // 0. Instant Access (Session Flag for Signup session)
     if (sessionStorage.getItem('alt_new_signup_active') === '1') {
-      console.log("[Auth] PRO Active via Session Flag");
-      return true;
+      const signupTime = parseInt(sessionStorage.getItem('alt_signup_time') || NOW);
+      if (NOW - signupTime < DAY_MS) return true;
+      else sessionStorage.removeItem('alt_new_signup_active');
     }
 
     // 1. GOLD STANDARD: 24-Hour Trial based on Auth Metadata
     if (user.metadata && user.metadata.creationTime) {
       const creationTime = new Date(user.metadata.creationTime).getTime();
-      if (Date.now() - creationTime < 86400000) {
-        console.log("[Auth] PRO Active via Auth Metadata (24h Trial)");
-        return true;
-      }
+      if (NOW - creationTime < DAY_MS) return true;
     }
 
     // 2. Persistent Hint (Local Storage)
-    if (localStorage.getItem('alt_trial_active') === '1' || localStorage.getItem('altscalp_pro') === '1') {
-      console.log("[Auth] PRO Active via Local Storage Hint");
-      return true;
-    }
+    const localTrialStart = parseInt(localStorage.getItem('alt_trial_start') || 0);
+    if (localTrialStart > 0 && NOW - localTrialStart < DAY_MS) return true;
 
     // 3. Firestore Database (The official record for paid plans)
     if (userData && userData.isPro) {
-      if (userData.expiryDate && userData.expiryDate.seconds * 1000 > Date.now()) {
-        console.log("[Auth] PRO Active via Firestore (Paid/Active)");
-        return true;
-      }
+      if (userData.expiryDate && userData.expiryDate.seconds * 1000 > NOW) return true;
       if (userData.plan === 'pro') return true;
+      if (userData.plan === 'trial') {
+        const dbStart = userData.trialStartedAt.seconds * 1000;
+        if (NOW - dbStart < DAY_MS) return true;
+      }
     }
 
     return false;
@@ -3959,6 +3960,18 @@
     }
     applyProStatus();
     updateWinRate();
+    
+    // AUTO-LOCK MONITOR: Check every 60 seconds for trial expiry
+    setInterval(() => {
+      const isPro = checkProStatus();
+      const currentUIPro = document.getElementById('go-pro-btn')?.classList.contains('pro-active');
+      if (currentUIPro && !isPro) {
+        console.log("[Auth] Trial expired, locking features...");
+        applyProStatus();
+        showToast("🔔 Your 24-hour PRO trial has expired. Upgrade to keep using premium tools!", "warning", 10000);
+      }
+    }, 60000);
+
     // Init AdSense
     try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { }
   });
