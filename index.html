@@ -3646,6 +3646,7 @@
     const doc = await userRef.get();
 
     if (!doc.exists) {
+      console.log("[Auth] Creating new profile for:", user.email);
       // Create new profile with 24h trial
       const newProfile = {
         email: user.email,
@@ -3656,9 +3657,16 @@
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       };
       await userRef.set(newProfile);
-      userData = newProfile;
+      
+      // For the VERY FIRST session, we need local seconds so the trial toast functions don't crash
+      userData = { 
+        ...newProfile, 
+        trialStartedAt: { seconds: Math.floor(Date.now() / 1000) } 
+      };
+      console.log("[Auth] Trial activated for new user");
     } else {
       userData = doc.data();
+      console.log("[Auth] Profile synced:", userData.plan);
       // Auto-check for trial expiry
       if (userData.plan === 'trial') {
         const start = userData.trialStartedAt.seconds * 1000;
