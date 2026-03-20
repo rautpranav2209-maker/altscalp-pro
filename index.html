@@ -8,11 +8,14 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap"
     rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-  <!-- Firebase SDK (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.4.0/firebase-analytics-compat.js"></script>
+
+  <!-- Razorpay SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script><style>
     :root {
       --bg: #07090e;
       --s1: #0c1018;
@@ -1993,6 +1996,26 @@
         grid-template-columns: 6px 70px 30px 50px 38px 40px 44px;
         font-size: 8px
       }
+
+      /* Premium Modal Mobile Overrides */
+      .premium-card {
+        padding: 20px !important;
+        margin: 10px;
+        width: 100%;
+        max-width: 360px;
+      }
+      .plan-grid {
+        grid-template-columns: 1fr;
+      }
+      .comp-table {
+        font-size: 9px;
+      }
+      .comp-table th, .comp-table td {
+        padding: 6px;
+      }
+      .comp-table .val-free, .comp-table .val-pro {
+        width: 45px;
+      }
     }
 
     /* ════════ MONETIZATION STYLES ════════ */
@@ -2089,7 +2112,6 @@
       color: var(--td);
       font-size: 9px;
       letter-spacing: .08em;
-      text-transform: uppercase;
       padding: 6px;
     }
 
@@ -2097,272 +2119,107 @@
       display: none !important
     }
 
-    /* PRO Modal */
-    .pro-modal-bg {
+    /* ══════════ MODAL ENHANCEMENTS ══════════ */
+    .modal-overlay, .pro-modal-bg, .auth-modal {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, .75);
-      backdrop-filter: blur(10px);
-      z-index: 9000;
+      background: rgba(3, 7, 13, 0.88);
+      backdrop-filter: blur(12px);
+      z-index: 10000;
       display: flex;
       align-items: center;
       justify-content: center;
-      animation: fadein .2s
+      animation: modalFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .pro-modal {
-      background: linear-gradient(145deg, #0c1520, #0d1117);
-      border: 1px solid rgba(255, 179, 71, .3);
-      border-radius: 16px;
-      padding: 36px;
-      max-width: 480px;
-      width: 90%;
-      position: relative;
-      box-shadow: 0 0 60px rgba(255, 179, 71, .1)
-    }
-
-    .pro-modal-close {
-      position: absolute;
-      top: 14px;
-      right: 18px;
-      font-size: 20px;
-      cursor: pointer;
-      color: var(--tm);
-      transition: .15s
-    }
-
-    .pro-modal-close:hover {
-      color: var(--tx)
-    }
-
-    .pro-badge {
-      display: inline-block;
-      background: linear-gradient(90deg, #f0b90b, #ff9800);
-      color: #000;
-      font-weight: 800;
-      font-size: 10px;
-      letter-spacing: .08em;
-      padding: 3px 10px;
+    .premium-card {
+      background: linear-gradient(165deg, #0f172a, #020617);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 20px;
-      margin-bottom: 12px
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 229, 160, 0.03);
+      position: relative;
+      overflow: hidden;
     }
 
-    .pro-title {
-      font-family: var(--fn);
-      font-size: 28px;
-      font-weight: 800;
-      margin-bottom: 6px;
-      background: linear-gradient(90deg, #ffffff, #f0b90b);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent
+    .premium-card::after {
+      content: '';
+      position: absolute;
+      top: -50%; left: -50%; width: 200%; height: 200%;
+      background: radial-gradient(circle at center, rgba(0, 229, 160, 0.03) 0%, transparent 70%);
+      pointer-events: none;
     }
 
-    .pro-sub {
-      color: var(--tm);
-      font-size: 12px;
-      margin-bottom: 24px
+    /* Comparison Table */
+    .comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 11px;
     }
-
-    .pro-features {
-      list-style: none;
-      margin-bottom: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px
+    .comp-table th, .comp-table td {
+      padding: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      text-align: left;
     }
+    .comp-table th { color: var(--tm); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .comp-table .feat { color: var(--tx); font-weight: 500; }
+    .comp-table .val-free { color: var(--td); text-align: center; width: 60px; }
+    .comp-table .val-pro { color: var(--g); text-align: center; width: 60px; font-weight: 700; }
 
-    .pro-features li {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 12px;
-      color: var(--tx)
-    }
-
-    .pro-features li::before {
-      content: '✓';
-      color: var(--g);
-      font-weight: 700;
-      width: 16px;
-      flex-shrink: 0
-    }
-
-    .pro-plans {
+    /* Plan Selection */
+    .plan-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 20px
+      gap: 15px;
+      margin: 20px 0;
     }
-
-    .pro-plan {
-      border: 1px solid var(--b2);
-      border-radius: 10px;
-      padding: 16px;
-      text-align: center;
-      cursor: pointer;
-      transition: .15s;
-      background: var(--s2)
-    }
-
-    .pro-plan:hover,
-    .pro-plan.sel {
-      border-color: var(--a);
-      background: rgba(255, 179, 71, .06)
-    }
-
-    .pro-plan-price {
-      font-family: var(--fn);
-      font-size: 22px;
-      font-weight: 800;
-      color: var(--a)
-    }
-
-    .pro-plan-label {
-      font-size: 9px;
-      color: var(--tm);
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      margin-top: 3px
-    }
-
-    .pro-plan-save {
-      font-size: 9px;
-      color: var(--g);
-      margin-top: 4px;
-      font-weight: 700
-    }
-
-    .pro-pay-btn {
-      display: block;
-      width: 100%;
-      padding: 13px;
-      border-radius: 10px;
-      border: none;
-      font-family: var(--fn);
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-      transition: .15s;
-      letter-spacing: .04em;
-      text-decoration: none;
-      text-align: center;
-      background: linear-gradient(90deg, #f0b90b, #ff9800);
-      color: #000
-    }
-
-    .pro-pay-btn:hover {
-      filter: brightness(1.1);
-      transform: translateY(-1px)
-    }
-
-    .pro-note {
-      font-size: 10px;
-      color: var(--td);
-      text-align: center;
-      margin-top: 12px
-    }
-
-    /* Go PRO button */
-    .go-pro-btn {
-      padding: 5px 14px;
-      background: linear-gradient(90deg, #f0b90b, #ff9800);
-      color: #000;
-      border: none;
-      border-radius: 5px;
-      font-family: var(--fn);
-      font-weight: 800;
-      font-size: 11px;
-      cursor: pointer;
-      letter-spacing: .04em;
-      transition: .15s;
-      white-space: nowrap
-    }
-
-    .go-pro-btn:hover {
-      filter: brightness(1.1);
-      transform: translateY(-1px)
-    }
-
-    .go-pro-btn.pro-active {
-      background: linear-gradient(90deg, #00e5a0, #00b87a);
-      color: #000
-    }
-
-    /* ══════════ AUTH MODAL ══════════ */
-    .auth-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.85);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      backdrop-filter: blur(8px);
-    }
-
-    .auth-card {
-      background: var(--s1);
-      border: 1px solid var(--b1);
-      width: 320px;
-      padding: 30px;
+    .plan-box {
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 12px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-    }
-
-    .auth-title {
-      font-family: var(--fn);
-      font-size: 22px;
-      font-weight: 800;
-      margin-bottom: 8px;
-      text-align: center;
-    }
-
-    .auth-sub {
-      font-size: 11px;
-      color: var(--tm);
-      text-align: center;
-      margin-bottom: 24px;
-    }
-
-    .auth-input {
-      width: 100%;
-      padding: 12px;
-      background: var(--s2);
-      border: 1px solid var(--b1);
-      border-radius: 6px;
-      color: var(--tx);
-      font-family: var(--fm);
-      margin-bottom: 12px;
-      outline: none;
-      transition: border-color .2s;
-    }
-
-    .auth-input:focus {
-      border-color: var(--g);
-    }
-
-    .auth-btn {
-      width: 100%;
-      padding: 12px;
-      background: var(--g);
-      color: #000;
-      border: none;
-      border-radius: 6px;
-      font-weight: 700;
+      padding: 18px;
       cursor: pointer;
-      transition: all .2s;
-      margin-top: 10px;
-    }
-
-    .auth-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 5px 15px var(--gd);
-    }
-
-    .auth-switch {
+      transition: all 0.2s ease;
+      background: rgba(255, 255, 255, 0.02);
       text-align: center;
-      font-size: 11px;
+    }
+    .plan-box:hover { border-color: rgba(0, 229, 160, 0.3); background: rgba(0, 229, 160, 0.04); }
+    .plan-box.sel { 
+      border-color: var(--g); 
+      background: rgba(0, 229, 160, 0.08);
+      box-shadow: 0 0 20px rgba(0, 229, 160, 0.1);
+    }
+    .plan-price { font-family: var(--fn); font-size: 24px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+    .plan-dur { font-size: 10px; color: var(--tm); text-transform: uppercase; letter-spacing: 0.1em; }
+    .plan-save { color: var(--g); font-size: 9px; font-weight: 700; margin-top: 6px; }
+
+    /* Auth Styling */
+    .auth-title { font-family: var(--fn); font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 8px; }
+    .auth-desc { font-size: 12px; color: var(--tm); text-align: center; margin-bottom: 24px; line-height: 1.5; }
+    .input-grp { margin-bottom: 15px; }
+    .input-grp label { display: block; font-size: 10px; color: var(--tm); margin-bottom: 6px; text-transform: uppercase; }
+    .auth-input {
+      width: 100%; padding: 12px 15px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; color: #fff; font-family: var(--fm); outline: none; transition: 0.2s;
+    }
+    .auth-input:focus { border-color: var(--g); background: rgba(0,229,160,0.03); }
+    .btn-primary {
+      width: 100%; padding: 14px; background: var(--g); color: #000; border: none; border-radius: 8px;
+      font-family: var(--fn); font-weight: 800; font-size: 14px; cursor: pointer; transition: 0.2s;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0, 229, 160, 0.2); }
+    
+    #global-loader {
+      backdrop-filter: blur(15px);
+      flex-direction: column;
+      gap: 20px;
+    }
+    .loader-spin {
+      width: 40px; height: 40px; border: 3px solid rgba(0,229,160,0.1); border-top-color: var(--g);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .auth-switch {
       color: var(--tm);
       margin-top: 16px;
       cursor: pointer;
@@ -2389,70 +2246,89 @@
 <div id="modal-root"></div>
 
 <!-- ══════════ AUTH MODAL ══════════ -->
-<div id="auth-modal" class="auth-modal">
-  <div class="auth-card">
+<div id="auth-modal" class="auth-modal" style="display:none">
+  <div class="premium-card auth-card" style="padding:40px; width:360px">
     <div id="auth-view-login">
       <h2 class="auth-title">Welcome Back</h2>
-      <p class="auth-sub">Log in to sync your AltScalp account</p>
-      <input type="email" id="login-email" class="auth-input" placeholder="Email Address">
-      <input type="password" id="login-pass" class="auth-input" placeholder="Password">
-      <button class="auth-btn" onclick="handleEmailLogin()">Sign In</button>
-      <p class="auth-switch">Don't have an account? <span onclick="toggleAuthView('signup')">Sign Up</span></p>
+      <p class="auth-desc">Log in to sync your AltScalp data across all your devices.</p>
+      <div class="input-grp">
+        <label>Email Address</label>
+        <input type="email" id="login-email" class="auth-input" placeholder="name@email.com">
+      </div>
+      <div class="input-grp">
+        <label>Password</label>
+        <input type="password" id="login-pass" class="auth-input" placeholder="••••••••">
+      </div>
+      <button class="btn-primary" onclick="handleEmailLogin()">Sign In</button>
+      <p class="auth-switch">New to AltScalp? <span onclick="toggleAuthView('signup')">Create Account</span></p>
     </div>
     <div id="auth-view-signup" style="display:none">
-      <h2 class="auth-title">Join AltScalp</h2>
-      <p class="auth-sub">Create a secure account to save your data</p>
-      <input type="email" id="signup-email" class="auth-input" placeholder="Email Address">
-      <input type="password" id="signup-pass" class="auth-input" placeholder="Password">
-      <button class="auth-btn" style="background:var(--bl)" onclick="handleEmailSignup()">Create Account</button>
+      <h2 class="auth-title">Join PRO</h2>
+      <p class="auth-desc">Create your secure account to unlock advanced AI signals.</p>
+      <div class="input-grp">
+        <label>Email Address</label>
+        <input type="email" id="signup-email" class="auth-input" placeholder="name@email.com">
+      </div>
+      <div class="input-grp">
+        <label>Set Password</label>
+        <input type="password" id="signup-pass" class="auth-input" placeholder="••••••••">
+      </div>
+      <button class="btn-primary" style="background:var(--bl)" onclick="handleEmailSignup()">Create Account</button>
       <p class="auth-switch">Already have an account? <span onclick="toggleAuthView('login')">Sign In</span></p>
     </div>
-    <button id="auth-close-btn" onclick="closeAuthModal()"
-      style="width:100%;background:none;border:none;color:var(--td);margin-top:20px;cursor:pointer;font-size:10px;display:none">CLOSE</button>
+    <div style="margin-top:20px; text-align:center">
+      <button onclick="closeAuthModal()" style="background:none; border:none; color:var(--td); cursor:pointer; font-size:10px; letter-spacing:0.1em">✕ CANCEL</button>
+    </div>
   </div>
 </div>
 
-<!-- ══════════ PRO SUBSCRIPTION MODAL ══════════ -->
+<!-- ══════════ PREMIUM PRO MODAL ══════════ -->
 <div class="pro-modal-bg" id="pro-modal" style="display:none">
-  <div class="pro-modal">
-    <span class="pro-modal-close" onclick="closeProModal()">✕</span>
-    <div class="pro-badge">⚡ UPGRADE TO PRO</div>
-    <div class="pro-title">AltScalp PRO</div>
-    <div class="pro-sub">Unlock the full advanced trading experience</div>
-    <ul class="pro-features">
-      <li>Priority signal alerts (real-time)</li>
-      <li>Advanced AI/ML scanner filters</li>
-      <li>Unlimited paper trade history</li>
-      <li>Real-time Win Rate Tracker</li>
-      <li>Desktop Notification Alerts</li>
-      <li>Early access to new features</li>
-    </ul>
-    <div class="pro-plans">
-      <div class="pro-plan sel" id="plan-monthly" onclick="selPlan('monthly')">
-        <div class="pro-plan-price">$7</div>
-        <div class="pro-plan-label">Per Month</div>
-        <div class="pro-plan-save">&nbsp;</div>
-      </div>
-      <div class="pro-plan" id="plan-yearly" onclick="selPlan('yearly')">
-        <div class="pro-plan-price">$50</div>
-        <div class="pro-plan-label">Per Year</div>
-        <div class="pro-plan-save">Save 30% 🎉</div>
-      </div>
+  <div class="premium-card" style="width:520px; padding:40px">
+    <span style="position:absolute; top:20px; right:20px; color:var(--td); cursor:pointer; font-size:18px" onclick="closeProModal()">✕</span>
+    <div style="text-align:center; margin-bottom:25px">
+      <div style="background:var(--gd); color:var(--g); font-weight:800; font-size:10px; padding:4px 12px; border-radius:20px; display:inline-block; margin-bottom:12px; letter-spacing:0.1em">UPGRADE TO PRO</div>
+      <h2 style="font-family:var(--fn); font-size:32px; font-weight:800; color:#fff; letter-spacing:-0.5px">Master the Markets.</h2>
+      <p style="color:var(--tm); font-size:13px; margin-top:5px">Join 5,000+ elite traders using institutional AI tools.</p>
     </div>
-    <a id="pro-pay-link" href="https://rzp.io/rzp/JMl5m3lg" target="_blank" class="pro-pay-btn"
-      onclick="handleProPayClick()">Pay ₹640/month via Razorpay →</a>
 
-    <div id="pro-activation-area" style="margin-top:15px; padding-top:15px; border-top:1px dashed var(--b2)">
-      <div class="pro-note" style="margin-bottom:8px">Already subscribed? Enter your access code:</div>
-      <div style="display:flex; gap:8px">
-        <input type="text" id="pro-code-input" placeholder="ALTPRO#0000"
-          style="flex:1; background:var(--s2); border:1px solid var(--b2); color:var(--tx); padding:8px 12px; border-radius:6px; font-family:var(--fm); font-size:12px; outline:none">
-        <button onclick="activatePro()"
-          style="padding:8px 15px; background:var(--gd); border:none; color:var(--g); border-radius:6px; font-weight:700; cursor:pointer; font-size:11px">ACTIVATE</button>
+    <table class="comp-table">
+      <thead>
+        <tr><th>FEATURE</th><th style="text-align:center">FREE</th><th style="text-align:center">PRO</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="feat">AI Signal Frequency</td><td class="val-free">Standard</td><td class="val-pro">Priority</td></tr>
+        <tr><td class="feat">Advanced ML Filters</td><td class="val-free">✕</td><td class="val-pro">✓</td></tr>
+        <tr><td class="feat">Win Rate Tracking</td><td class="val-free">10 Trades</td><td class="val-pro">Unlimited</td></tr>
+        <tr><td class="feat">Desktop Push Alerts</td><td class="val-free">✕</td><td class="val-pro">✓</td></tr>
+        <tr><td class="feat">Market Microstructure</td><td class="val-free">Delayed</td><td class="val-pro">Real-time</td></tr>
+      </tbody>
+    </table>
+
+    <div class="plan-grid">
+      <div class="plan-box sel" id="plan-monthly" onclick="selPlan('monthly')">
+        <div class="plan-price">₹1,499</div>
+        <div class="plan-dur">Per Month</div>
+      </div>
+      <div class="plan-box" id="plan-yearly" onclick="selPlan('yearly')">
+        <div class="plan-price">₹9,999</div>
+        <div class="plan-dur">Per Year</div>
+        <div class="plan-save">Save ₹7,989 🎉</div>
       </div>
     </div>
-    <div class="pro-note" style="margin-top:12px; opacity:0.7">Access code unlocks: <b>Win Rate Tracker</b> & <b>Desktop
-        Alerts</b></div>
+
+    <button class="btn-primary" onclick="handleProPayClick()" id="pro-pay-btn">
+      <span id="pro-pay-btn-text">Unlock Full PRO for ₹1,499/mo →</span>
+    </button>
+    
+    <div style="margin-top:20px; text-align:center; display:flex; align-items:center; justify-content:center; gap:15px">
+      <div style="display:flex; align-items:center; gap:5px; font-size:10px; color:var(--td)">
+        <span style="font-size:16px">🛡️</span> Secure via Razorpay
+      </div>
+      <div style="display:flex; align-items:center; gap:5px; font-size:10px; color:var(--td)">
+        <span style="font-size:16px">🔥</span> 7-Day Money Back
+      </div>
+    </div>
   </div>
 </div>
 </div>
@@ -3641,13 +3517,37 @@
   </div>
 </div>
 
+<!-- Welcome Modal -->
+<div id="welcome-modal" class="modal-overlay" style="display:none">
+  <div class="premium-card" style="width:90%; max-width:500px; padding:40px; text-align:center">
+    <div style="font-size:50px; margin-bottom:20px">🚢</div>
+    <h2 style="font-family:var(--fn); font-size:28px; font-weight:800; color:#fff; margin-bottom:15px">Welcome to AltScalp PRO</h2>
+    <p style="color:var(--tm); font-size:14px; line-height:1.6; margin-bottom:30px">
+      You are now equipped with institutional-grade AI signals and market microstructure data. 
+      <br><br>
+      <b>Your 24-Hour PRO Trial starts now!</b> Explore all features, including AI Filters and Order Flow.
+    </p>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:30px">
+      <div style="background:rgba(255,255,255,0.03); border-radius:12px; padding:15px">
+        <div style="font-size:18px; margin-bottom:5px">⚡</div>
+        <div style="font-size:11px; font-weight:700">AI SIGNALS</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.03); border-radius:12px; padding:15px">
+        <div style="font-size:18px; margin-bottom:5px">📊</div>
+        <div style="font-size:11px; font-weight:700">ORDER FLOW</div>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="closeWelcome()" style="width:100%">Let's Start Trading →</button>
+  </div>
+</div>
+
 <script>
   /* ═══════════════════════════════════════════════════════════
      UTILITY SYSTEMS: Toast, Modal, Debounce, localStorage, etc.
      ═══════════════════════════════════════════════════════════ */
 
   /* ══════════ FIREBASE AUTH ══════════ */
-  // PASTE YOUR FIREBASE CONFIG HERE:
+  /* ══════════ FIREBASE & FIRESTORE ══════════ */
   const firebaseConfig = {
     apiKey: "AIzaSyAn_kGeypS_m6L9BK5HNADGzo1tFOAoYMo",
     authDomain: "altscalp-pro.firebaseapp.com",
@@ -3658,35 +3558,99 @@
     measurementId: "G-8TPNKF8KEL"
   };
 
+  let userData = null; // Stores Firestore user profile
+  let analytics = null;
+
   function initAuth() {
     if (typeof firebase === 'undefined') return;
     firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    analytics = firebase.analytics();
 
-    // Listen for auth changes
-    firebase.auth().onAuthStateChanged((user) => {
+    firebase.auth().onAuthStateChanged(async (user) => {
       if (user) {
         document.getElementById('login-btn').style.display = 'none';
         document.getElementById('user-profile').style.display = 'flex';
         document.getElementById('user-email').textContent = user.email;
         closeAuthModal();
+        
+        // Sync Profile with Firestore
+        await syncUserProfile(user);
         applyProStatus();
 
-        // Show Free Trial Notification
-        const isPermanentPro = localStorage.getItem('altscalp_pro') === '1';
-        if (!isPermanentPro) {
-          const signupDate = new Date(user.metadata.creationTime);
+        // Show Trial Notification from Database
+        if (userData && userData.plan === 'trial') {
+          const expiry = new Date(userData.trialStartedAt.seconds * 1000 + 86400000);
           const now = new Date();
-          const diffHours = (now - signupDate) / (1000 * 60 * 60);
-          if (diffHours < 24) {
-            showToast(`🎁 24H Free Trial Active! Expires in ${Math.round(24 - diffHours)} hours.`, 'info', 8000);
+          const rem = Math.max(0, Math.round((expiry - now) / 3600000));
+          if (rem > 0) {
+            showToast(`🎁 24H Trial Active! ${rem} hours remaining.`, 'info', 8000);
+          } else {
+            showToast(`⚠️ Trial Expired. Upgrade to PRO to continue.`, 'warning', 10000);
           }
+        } else if (userData && userData.plan === 'pro') {
+          showToast(`⚡ Welcome back, PRO Trader! Institutional tools active.`, 'success', 5000);
+        } else {
+          showToast(`💡 Tip: Check the "Risk" tab to set your capital for safer trading.`, 'info', 6000);
         }
       } else {
         document.getElementById('login-btn').style.display = 'block';
         document.getElementById('user-profile').style.display = 'none';
+        userData = null;
         openAuthModal();
       }
     });
+  }
+
+  function checkWelcomePopup() {
+    if (!localStorage.getItem('altscalp_welcome_seen')) {
+      document.getElementById('welcome-modal').style.display = 'flex';
+    }
+  }
+
+  function closeWelcome() {
+    document.getElementById('welcome-modal').style.display = 'none';
+    localStorage.setItem('altscalp_welcome_seen', '1');
+    trackEvent('welcome_tutorial_complete');
+  }
+
+  function trackEvent(name, params = {}) {
+    if (analytics) {
+      analytics.logEvent(name, params);
+      console.log(`[Analytics] ${name}`, params);
+    }
+  }
+
+  async function syncUserProfile(user) {
+    const db = firebase.firestore();
+    const userRef = db.collection('users').doc(user.uid);
+    const doc = await userRef.get();
+
+    if (!doc.exists) {
+      // Create new profile with 24h trial
+      const newProfile = {
+        email: user.email,
+        trialStartedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        plan: 'trial',
+        isPro: true,
+        trialUsed: true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      await userRef.set(newProfile);
+      userData = newProfile;
+    } else {
+      userData = doc.data();
+      // Auto-check for trial expiry
+      if (userData.plan === 'trial') {
+        const start = userData.trialStartedAt.seconds * 1000;
+        if (Date.now() - start > 86400000) {
+          if (userData.isPro) {
+            await userRef.update({ isPro: false });
+            userData.isPro = false;
+          }
+        }
+      }
+    }
   }
 
   function openAuthModal() { document.getElementById('auth-modal').style.display = 'flex'; toggleAuthView('login'); }
@@ -3703,6 +3667,7 @@
 
     try {
       await firebase.auth().createUserWithEmailAndPassword(email, pass);
+      trackEvent('sign_up', { method: 'email' });
       showToast('Account created successfully!', 'success');
       closeAuthModal();
     } catch (error) {
@@ -3717,6 +3682,7 @@
 
     try {
       await firebase.auth().signInWithEmailAndPassword(email, pass);
+      trackEvent('login', { method: 'email' });
       closeAuthModal();
     } catch (error) {
       showToast(error.message, 'error');
@@ -3733,15 +3699,18 @@
   }
 
   /* ═══════════ PRO SUBSCRIPTION LOGIC ═══════════ */
-  const RAZORPAY_MONTHLY = 'https://rzp.io/rzp/JMl5m3lg'; // ₹580/month ($7)
-  const RAZORPAY_YEARLY = 'https://razorpay.me/@pranaveknathraut'; // ₹4,150/year ($50)
-  // Secret access code (change this to your own code before publishing)
-  const PRO_ACCESS_CODE = 'ALTPRO#8821';
+  const RAZORPAY_KEY_ID = 'rzp_live_XXXXXXXXXXXXXX'; // Replace with real key
+  const PLAN_PRICES = {
+    monthly: 149900, // ₹1499 in paise
+    yearly: 999900   // ₹9999 in paise
+  };
 
   let selectedPlan = 'monthly';
 
   function openProModal() {
     document.getElementById('pro-modal').style.display = 'flex';
+    selPlan('monthly');
+    trackEvent('view_promotion', { promotion_name: 'PRO_Subscription_Modal' });
   }
   function closeProModal() {
     document.getElementById('pro-modal').style.display = 'none';
@@ -3750,46 +3719,100 @@
     selectedPlan = plan;
     document.getElementById('plan-monthly').classList.toggle('sel', plan === 'monthly');
     document.getElementById('plan-yearly').classList.toggle('sel', plan === 'yearly');
-    const link = plan === 'yearly' ? RAZORPAY_YEARLY : RAZORPAY_MONTHLY;
-    const btn = document.getElementById('pro-pay-link');
-    btn.href = link;
-    btn.textContent = plan === 'yearly'
-      ? 'Pay ₹4,150/year via Razorpay →'
-      : 'Pay ₹640/month via Razorpay →';
+    const priceText = plan === 'yearly' ? '₹9,999/year' : '₹1,499/month';
+    document.getElementById('pro-pay-btn-text').textContent = `Unlock Full PRO for ${priceText} →`;
   }
+
   function handleProPayClick() {
-    // After payment, user will use access code to activate
-    setTimeout(() => {
-      showToast('After payment, click "Enter access code" to activate PRO!', 'info', 5000);
-    }, 500);
-  }
-  function activatePro() {
-    const codeInput = document.getElementById('pro-code-input');
-    const code = codeInput.value;
-    if (code && code.trim().toUpperCase() === PRO_ACCESS_CODE) {
-      localStorage.setItem('altscalp_pro', '1');
-      applyProStatus();
-      closeProModal();
-      showToast('🎉 PRO activated! Enjoy AltScalp PRO features.', 'success', 5000);
-    } else if (code) {
-      showToast('Invalid access code. Please try again.', 'error');
-      codeInput.style.borderColor = 'var(--r)';
-      setTimeout(() => codeInput.style.borderColor = '', 1500);
+    if (!firebase.auth().currentUser) {
+      showToast('Please sign in to upgrade', 'error');
+      openAuthModal();
+      return;
     }
+
+    const options = {
+      key: RAZORPAY_KEY_ID,
+      amount: PLAN_PRICES[selectedPlan],
+      currency: "INR",
+      name: "AltScalp PRO",
+      description: `Subscription: ${selectedPlan.toUpperCase()} Plan`,
+      image: "https://altscalp-pro.vercel.app/logo.png",
+      handler: async function (response) {
+        // This is called after payment success
+        showLoadingOverlay(true);
+        try {
+          const db = firebase.firestore();
+          const user = firebase.auth().currentUser;
+          const expiryDate = new Date();
+          if (selectedPlan === 'monthly') expiryDate.setMonth(expiryDate.getMonth() + 1);
+          else expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+
+          await db.collection('users').doc(user.uid).update({
+            isPro: true,
+            plan: selectedPlan,
+            expiryDate: firebase.firestore.Timestamp.fromDate(expiryDate),
+            lastPaymentId: response.razorpay_payment_id
+          });
+
+          await syncUserProfile(user);
+          applyProStatus();
+          closeProModal();
+          trackEvent('purchase', {
+            transaction_id: response.razorpay_payment_id,
+            value: PLAN_PRICES[selectedPlan] / 100,
+            currency: 'INR',
+            items: [{ item_name: `AltScalp PRO ${selectedPlan}` }]
+          });
+          showToast('🎉 Congratulations! PRO Unlocked.', 'success', 8000);
+        } catch (e) {
+          showToast('Payment confirmed but profile update failed. Contact support.', 'error');
+        }
+        showLoadingOverlay(false);
+      },
+      prefill: {
+        email: firebase.auth().currentUser.email
+      },
+      theme: { color: "#00ffa3" }
+    };
+    const rzp1 = new Razorpay(options);
+    rzp1.open();
+    trackEvent('begin_checkout', {
+      value: PLAN_PRICES[selectedPlan] / 100,
+      currency: 'INR',
+      items: [{ item_name: `AltScalp PRO ${selectedPlan}` }]
+    });
   }
+
+  function activatePro() {
+    // Secret code fallback removed for now to favor real payments
+    showToast('Secret codes are currently disabled. Please use Razorpay for secure activation.', 'warning');
+  }
+
   function checkProStatus() {
-    // 1. Check permanent PRO code activation
+    // 1. Check Firestore Profile (Highest Priority)
+    if (userData && userData.isPro) {
+      if (userData.plan === 'trial') return true;
+      if (userData.expiryDate) {
+        if (userData.expiryDate.seconds * 1000 > Date.now()) return true;
+      }
+    }
+
+    // 2. Legacy Local Code
     if (localStorage.getItem('altscalp_pro') === '1') return true;
 
-    // 2. Check 24-Hour Free Trial for Firebase users
-    const user = (typeof firebase !== 'undefined' && firebase.auth()) ? firebase.auth().currentUser : null;
-    if (user) {
-      const signupDate = new Date(user.metadata.creationTime);
-      const now = new Date();
-      const diffHours = (now - signupDate) / (1000 * 60 * 60);
-      if (diffHours < 24) return true;
-    }
     return false;
+  }
+
+  function showLoadingOverlay(show) {
+    let loader = document.getElementById('global-loader');
+    if (!loader) {
+      loader = document.createElement('div');
+      loader.id = 'global-loader';
+      loader.style = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:10000;display:flex;align-items:center;justify-content:center;color:var(--g);font-family:var(--fn);';
+      loader.innerHTML = '<div><div class="live-dot"></div> SYNCING WITH BLOCKCHAIN...</div>';
+      document.body.appendChild(loader);
+    }
+    loader.style.display = show ? 'flex' : 'none';
   }
 
   function applyProStatus() {
@@ -3819,6 +3842,38 @@
     // Hide activation area if already pro
     const actArea = document.getElementById('pro-activation-area');
     if (actArea) actArea.style.display = isPro ? 'none' : 'block';
+
+    // Lock entire pages
+    updateTabLocking(isPro);
+  }
+
+  function updateTabLocking(isPro) {
+    const proTabs = ['microstructure', 'ml'];
+    proTabs.forEach(id => {
+      const page = document.getElementById(`page-${id}`);
+      if (!page) return;
+      
+      let lock = page.querySelector('.pro-lock-overlay');
+      if (!isPro) {
+        if (!lock) {
+          lock = document.createElement('div');
+          lock.className = 'pro-lock-overlay';
+          lock.style = 'position:absolute;inset:0;background:rgba(2,6,23,0.85);backdrop-filter:blur(8px);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;';
+          lock.innerHTML = `
+            <div class="premium-card" style="padding:40px; max-width:400px; border-color:var(--g)">
+              <div style="font-size:40px; margin-bottom:20px">🔒</div>
+              <h2 style="font-family:var(--fn); font-size:24px; font-weight:800; color:#fff; margin-bottom:10px">PRO Feature Locked</h2>
+              <p style="color:var(--tm); font-size:13px; margin-bottom:25px">Access to institutional-grade ${id === 'ml' ? 'AI/ML' : 'Microstructure'} analysis requires an active PRO subscription.</p>
+              <button class="btn-primary" onclick="openProModal()">Upgrade to Unlock →</button>
+            </div>
+          `;
+          page.style.position = 'relative';
+          page.appendChild(lock);
+        }
+      } else if (lock) {
+        lock.remove();
+      }
+    });
   }
 
   // Init monetization on page load
@@ -4233,14 +4288,19 @@
   function toggleFav(e, pair) {
     e.stopPropagation();
     let favs = JSON.parse(localStorage.getItem(LS_KEYS.favs) || '[]');
-    if (favs.includes(pair)) favs = favs.filter(f => f !== pair);
-    else favs.push(pair);
+    let action = 'add';
+    if (favs.includes(pair)) {
+      favs = favs.filter(f => f !== pair);
+      action = 'remove';
+    } else favs.push(pair);
     localStorage.setItem(LS_KEYS.favs, JSON.stringify(favs));
+    trackEvent('favorite_toggle', { pair, action });
     buildScanner();
   }
 
   function loadPair(pair) {
     const d = PAIRS.find(x => x.p === pair); if (!d) return; activePair = pair; cPair = pair;
+    trackEvent('select_content', { content_type: 'coin', item_id: pair });
     document.getElementById('dp-pair').innerHTML = pair + '<span style="font-size:14px;color:var(--tm)">/USDT</span>';
     ['pc', 'ob', 'rsi', 'vd', 'fr', 'sp', 'sent', 'liq', 'vol', 'corr'].forEach(k => { const map = { pc: 'chg', ob: 'ob', rsi: 'rsi', vd: 'vd', fr: 'fr', sp: 'sp', sent: 'sent', liq: 'liq', vol: 'vol', corr: 'corr' }; document.getElementById('i-' + k).value = d[map[k]] || d[k] });
     curDPC = d.cat;
@@ -5588,6 +5648,7 @@
 
   /* ═══════════ INIT ═══════════ */
   tick();
+  checkWelcomePopup();
 
   /* ═══════════ KEYBOARD SHORTCUTS ═══════════ */
   document.addEventListener('keydown', (e) => {
@@ -5612,6 +5673,24 @@
   window.addEventListener('beforeunload', () => { saveState(); savePrefs(); });
 
 </script>
+  <!-- ══════════ FOOTER & LEGAL ══════════ -->
+  <footer style="margin-top:auto; padding:30px 20px; border-top:1px solid var(--b1); background:rgba(3,7,12,0.4); text-align:center">
+    <div style="font-family:var(--fn); font-size:14px; font-weight:800; color:var(--tm); margin-bottom:10px">
+      Alt<span style="color:var(--tx)">Scalp</span> <span style="font-size:10px; opacity:0.6">© 2026</span>
+    </div>
+    <div style="display:flex; justify-content:center; gap:20px; font-size:11px; color:var(--tm); margin-bottom:20px">
+      <a href="#" style="color:inherit; text-decoration:none">Privacy Policy</a>
+      <a href="#" style="color:inherit; text-decoration:none">Terms of Service</a>
+      <a href="#" style="color:inherit; text-decoration:none">Affiliate Disclosure</a>
+      <a href="#" style="color:inherit; text-decoration:none">Support</a>
+    </div>
+    <div style="max-width:800px; margin:0 auto; font-size:10px; color:var(--td); line-height:1.6; border:1px solid rgba(255,255,255,0.05); padding:15px; border-radius:8px">
+      <b>⚠️ RISK DISCLOSURE:</b> Trading cryptocurrencies carries a high level of risk and may not be suitable for all investors. The high degree of leverage can work against you as well as for you. Before deciding to trade, you should carefully consider your investment objectives, level of experience, and risk appetite. The signals provided by AltScalp PRO are for educational purposes only and do not constitute financial advice.
+    </div>
+    <div style="margin-top:20px; font-size:9px; color:var(--td); opacity:0.5">
+      Powered by Institutional AI & Deep Learning Model v4.2.0
+    </div>
+  </footer>
 </body>
 
 </html>
