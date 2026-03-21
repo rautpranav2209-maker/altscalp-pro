@@ -1,7 +1,7 @@
-const CACHE_NAME = 'altscalp-v7';
+const CACHE_NAME = 'altscalp-v12';
 const ASSETS = [
   '/',
-  '/index.html',
+  '/index.html?v=12',
   '/manifest.json'
 ];
 
@@ -23,7 +23,14 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  // Network-First Strategy for all assets
   e.respondWith(
-    caches.match(e.request).then((res) => res || fetch(e.request))
+    fetch(e.request)
+      .then((res) => {
+        const resClone = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, resClone));
+        return res;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
