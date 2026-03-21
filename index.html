@@ -4927,7 +4927,8 @@
     document.getElementById('obChart').chart_built = true;
     document.getElementById('obChart').current_pair = cPair;
 
-    const pd2 = PAIRS.find(d => d.p === cPair) || { price: 100, sig: 0 };
+    const pd2_raw = PAIRS.find(d => d.p === cPair) || { price: 100, sig: 0 };
+    const pd2 = { ...pd2_raw, sig: pd2_raw.sig !== undefined ? pd2_raw.sig : calcSig(pd2_raw) };
     const baseP = pd2.price;
     const precision = pd(cPair);
     
@@ -6206,8 +6207,8 @@
 
   // Service Worker Registration for PWA & Cache Busting (Restored)
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js?v=14')
-      .then(reg => console.log('[SW] Registered v14'))
+    navigator.serviceWorker.register('/service-worker.js?v=14.1')
+      .then(reg => console.log('[SW] Registered v14.1'))
       .catch(err => console.log('[SW] Failure', err));
   }
 
@@ -6240,7 +6241,7 @@
       <b>⚠️ RISK DISCLOSURE:</b> Trading cryptocurrencies carries a high level of risk and may not be suitable for all investors. The high degree of leverage can work against you as well as for you. Before deciding to trade, you should carefully consider your investment objectives, level of experience, and risk appetite. The signals provided by AltScalp PRO are for educational purposes only and do not constitute financial advice.
     </div>
     <div style="margin-top:20px; font-size:9px; color:var(--td); opacity:0.5">
-      Powered by Institutional AI & Deep Learning Model v14.0
+      Powered by Institutional AI & Deep Learning Model v14.1
     </div>
   </footer>
 </body>
