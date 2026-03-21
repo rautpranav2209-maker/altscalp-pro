@@ -2111,7 +2111,7 @@
     }
 
     /* AdSense slots */
-    .ad-slot {
+    .partner-card {
       background: var(--s2);
       border: 1px dashed rgba(255, 255, 255, 0.1);
       border-radius: 6px;
@@ -2124,7 +2124,7 @@
       padding: 6px;
     }
 
-    .ad-slot.hide {
+    .partner-card.hide {
       display: none !important
     }
 
@@ -2463,7 +2463,7 @@
         <div class="gl-tab all-t" id="gl-a" onclick="setGL('all',this)">≡ All</div>
       </div>
       <div id="market-rows" style="flex:1;overflow-y:auto;overflow-x:hidden"></div>
-      <div class="ad-slot"
+      <div class="partner-card"
         style="padding:10px;border-top:1px solid var(--b1);display:flex;flex-direction:column;gap:8px;">
         <a href="https://www.binance.com/referral/earn-together/refer2earn-usdc/claim?hl=en&ref=GRO_28502_LAC6Q&utm_source=default"
           target="_blank" rel="noopener"
@@ -3634,7 +3634,6 @@
         document.getElementById('login-btn').style.display = 'block';
         document.getElementById('user-profile').style.display = 'none';
         userData = null;
-        console.log("[Auth] User logged out");
       }
     });
   }
@@ -3654,7 +3653,6 @@
   function trackEvent(name, params = {}) {
     if (analytics) {
       analytics.logEvent(name, params);
-      console.log(`[Analytics] ${name}`, params);
     }
   }
 
@@ -3681,7 +3679,6 @@
     const doc = await userRef.get();
 
     if (!doc.exists) {
-      console.log("[Auth] Creating new profile for:", user.email);
       // Create new profile with 24h trial
       const newProfile = {
         email: user.email,
@@ -3698,10 +3695,8 @@
         ...newProfile, 
         trialStartedAt: { seconds: Math.floor(Date.now() / 1000) } 
       };
-      console.log("[Auth] Trial activated for new user");
     } else {
       userData = doc.data();
-      console.log("[Auth] Profile synced:", userData.plan);
       // Auto-check for trial expiry
       if (userData.plan === 'trial') {
         const start = userData.trialStartedAt.seconds * 1000;
@@ -3730,7 +3725,6 @@
       
       if (doc.exists) {
         const data = doc.data();
-        console.log("[Cloud] Loading trade data...");
         
         // Populate global state from cloud
         HIST = data.hist || [];
@@ -3748,7 +3742,6 @@
         updateWinRate();
         buildAnalytics();
       } else {
-        console.log("[Cloud] No existing trade data. Preparing first sync...");
         saveTradeDataToCloud(); // Save current local state as the baseline
       }
     } catch (e) {
@@ -3777,7 +3770,6 @@
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       
-      console.log("[Cloud] Trade data synced successfully");
     } catch (e) {
       console.error("[Cloud] Sync save error:", e.message);
     } finally {
@@ -4061,7 +4053,7 @@
     // Hide/show affiliate banner and ad slots
     const affBar = document.getElementById('aff-bar');
     if (affBar) affBar.style.display = isPro ? 'none' : '';
-    document.querySelectorAll('.ad-slot').forEach(el => el.classList.toggle('hide', isPro));
+    document.querySelectorAll('.partner-card').forEach(el => el.classList.toggle('hide', isPro));
     // Update Go PRO button
     const btn = document.getElementById('go-pro-btn');
     if (btn) {
@@ -4133,7 +4125,6 @@
       const isPro = checkProStatus();
       const currentUIPro = document.getElementById('go-pro-btn')?.classList.contains('pro-active');
       if (currentUIPro && !isPro) {
-        console.log("[Auth] Trial expired, locking features...");
         applyProStatus();
         showToast("🔔 Your 24-hour PRO trial has expired. Upgrade to keep using premium tools!", "warning", 10000);
       }
@@ -6299,9 +6290,7 @@
 
   // Service Worker Registration for PWA & Cache Busting
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js?v=16.0')
-      .then(reg => console.log('[SW] Registered v16.0'))
-      .catch(err => console.log('[SW] Failure', err));
+    navigator.serviceWorker.register('/service-worker.js?v=17.0')
   }
 
   /* ═══════════ KEYBOARD SHORTCUTS ═══════════ */
@@ -6360,7 +6349,7 @@
       <b>⚠️ RISK DISCLOSURE:</b> Trading cryptocurrencies carries a high level of risk and may not be suitable for all investors. The high degree of leverage can work against you as well as for you. Before deciding to trade, you should carefully consider your investment objectives, level of experience, and risk appetite. The signals provided by AltScalp PRO are for educational purposes only and do not constitute financial advice.
     </div>
     <div style="margin-top:20px; font-size:9px; color:var(--td); opacity:0.5">
-      Powered by Institutional AI & Deep Learning Model v16.0
+      Powered by Institutional AI & Deep Learning Model v17.0
     </div>
   </footer>
 </body>
