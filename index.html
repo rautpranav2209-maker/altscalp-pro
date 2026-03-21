@@ -3683,6 +3683,36 @@
     }
   }
 
+  async function submitSupportForm(e) {
+    e.preventDefault();
+    const btn = document.getElementById('support-submit-btn');
+    const form = e.target;
+    setLoading(btn, true);
+    
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+      // Using Formspree as the serverless bridge to user's personal email
+      const response = await fetch('https://formspree.io/f/mqakeeky', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        showToast('✅ Message Sent! We will reply within 2 hours.', 'success', 6000);
+        closeLegal();
+      } else {
+        throw new Error('Server returned an error');
+      }
+    } catch (err) {
+      showToast('❌ Failed to send. Please email support@altscalp.pro directly.', 'error');
+    } finally {
+      setLoading(btn, false);
+    }
+  }
+
   function openLegal(type) {
     const title = document.getElementById('legal-title');
     const body = document.getElementById('legal-body');
@@ -3715,14 +3745,35 @@
       case 'Support':
         content = `
           <div style="text-align: center; padding: 10px;">
-            <i class="fas fa-headset" style="font-size: 3rem; color: var(--g); margin-bottom: 20px;"></i>
-            <h3>How can we help?</h3>
-            <p>Our institutional support team is available 24/7 for technical assistance.</p>
-            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 6px; margin: 20px 0;">
-              <p><strong>Email:</strong> support@altscalp.pro</p>
-              <p><strong>Response Time:</strong> < 2 Hours</p>
-            </div>
-            <p style="font-size: 11px; color: var(--tm);">For urgent API issues, please include your Exchange name and Signal ID.</p>
+            <div style="font-size: 40px; margin-bottom: 20px">📬</div>
+            <h3 style="color:#fff; margin-bottom:10px">Institutional Support</h3>
+            <p style="font-size:12px; color:var(--tm); margin-bottom:20px">Our 24/7 team is ready to assist you. Fill out the form below or email <span style="color:var(--g)">support@altscalp.pro</span></p>
+            
+            <form id="support-form" onsubmit="submitSupportForm(event)" style="text-align:left; background:rgba(255,255,255,0.03); padding:20px; border-radius:12px; border:1px solid var(--b1)">
+              <div class="input-grp">
+                <label>Your Name</label>
+                <input type="text" name="name" class="auth-input" required placeholder="John Doe">
+              </div>
+              <div class="input-grp">
+                <label>Return Email</label>
+                <input type="email" name="email" class="auth-input" required placeholder="your@email.com" value="${firebase.auth().currentUser?.email || ''}">
+              </div>
+              <div class="input-grp">
+                <label>Support Category</label>
+                <select name="category" class="auth-input" style="background:#07090e">
+                  <option>Technical Issue</option>
+                  <option>Payment/Billing</option>
+                  <option>API Connectivity</option>
+                  <option>Feature Request</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="input-grp">
+                <label>Message</label>
+                <textarea name="message" class="auth-input" required style="height:100px; resize:none" placeholder="How can we help?"></textarea>
+              </div>
+              <button type="submit" class="btn-primary" id="support-submit-btn">Send Message →</button>
+            </form>
           </div>
         `;
         break;
@@ -3978,11 +4029,18 @@
       return;
     }
 
+    // ✅ HARDENING: Check if Razorpay SDK is actually loaded
+    if (typeof Razorpay === 'undefined') {
+      showToast('⚠️ Payment system is loading. Please wait 5 seconds and try again.', 'warning', 5000);
+      return;
+    }
+
     const btn = document.getElementById('pro-pay-btn');
     setLoading(btn, true);
+    showToast('⏳ Initializing secure checkout...', 'info', 2000);
 
     try {
-      // ✅ SECURE: Fetch Razorpay key + create order from server (key never in frontend)
+      // ✅ SECURE: Fetch Razorpay key + create order from server
       const idToken = await user.getIdToken(true);
       const orderRes = await fetch('/api/create-order', {
         method: 'POST',
@@ -3992,15 +4050,14 @@
 
       if (!orderRes.ok) {
         const err = await orderRes.json();
-        throw new Error(err.message || 'Failed to create order');
+        throw new Error(err.message || 'Server connection failed');
       }
 
       const { orderId, amount, currency, key } = await orderRes.json();
-
       setLoading(btn, false);
 
       const options = {
-        key,  // ✅ Key comes from server, never hardcoded in frontend
+        key,
         amount,
         currency,
         name: "AltScalp PRO",
@@ -6436,7 +6493,7 @@
       <b>⚠️ RISK DISCLOSURE:</b> Trading cryptocurrencies carries a high level of risk and may not be suitable for all investors. The high degree of leverage can work against you as well as for you. Before deciding to trade, you should carefully consider your investment objectives, level of experience, and risk appetite. The signals provided by AltScalp PRO are for educational purposes only and do not constitute financial advice.
     </div>
     <div style="margin-top:20px; font-size:9px; color:var(--td); opacity:0.5">
-      Powered by Institutional AI & Deep Learning Model v19.3
+      Powered by Institutional AI & Deep Learning Model v19.4
     </div>
   </footer>
 </body>
