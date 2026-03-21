@@ -2111,7 +2111,7 @@
     }
 
     /* AdSense slots */
-    .partner-card {
+    .ad-slot {
       background: var(--s2);
       border: 1px dashed rgba(255, 255, 255, 0.1);
       border-radius: 6px;
@@ -2124,7 +2124,7 @@
       padding: 6px;
     }
 
-    .partner-card.hide {
+    .ad-slot.hide {
       display: none !important
     }
 
@@ -2463,6 +2463,30 @@
         <div class="gl-tab all-t" id="gl-a" onclick="setGL('all',this)">≡ All</div>
       </div>
       <div id="market-rows" style="flex:1;overflow-y:auto;overflow-x:hidden"></div>
+      <div class="ad-slot"
+        style="padding:10px;border-top:1px solid var(--b1);display:flex;flex-direction:column;gap:8px;">
+        <a href="https://www.binance.com/referral/earn-together/refer2earn-usdc/claim?hl=en&ref=GRO_28502_LAC6Q&utm_source=default"
+          target="_blank" rel="noopener"
+          style="background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:12px;text-align:center;text-decoration:none;transition:all 0.15s"
+          onmouseover="this.style.borderColor='#f0b90b';this.style.background='rgba(240,185,11,0.05)'"
+          onmouseout="this.style.borderColor='var(--b1)';this.style.background='var(--s2)'">
+          <div style="color:#f0b90b;font-weight:800;font-size:14px;margin-bottom:4px;letter-spacing:0.02em">⚡ BINANCE
+          </div>
+          <div style="color:var(--tx);font-size:11px;font-weight:700">Claim 40% Fee Cashback!</div>
+          <div style="color:#f0b90b;font-size:9px;margin-top:6px;font-weight:700;text-transform:uppercase">Sign up now
+            →</div>
+        </a>
+        <a href="https://www.bybit.com/invite?ref=PLZV4AL" target="_blank" rel="noopener"
+          style="background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:12px;text-align:center;text-decoration:none;transition:all 0.15s"
+          onmouseover="this.style.borderColor='#e8a838';this.style.background='rgba(232,168,56,0.05)'"
+          onmouseout="this.style.borderColor='var(--b1)';this.style.background='var(--s2)'">
+          <div style="color:#e8a838;font-weight:800;font-size:14px;margin-bottom:4px;letter-spacing:0.02em">⚡ BYBIT
+          </div>
+          <div style="color:var(--tx);font-size:11px;font-weight:700">Exclusive 30% Fee Rebate!</div>
+          <div style="color:#e8a838;font-size:9px;margin-top:6px;font-weight:700;text-transform:uppercase">Claim offer
+            →</div>
+        </a>
+      </div>
     </aside>
 
     <!-- CENTER: Chart -->
@@ -3610,6 +3634,7 @@
         document.getElementById('login-btn').style.display = 'block';
         document.getElementById('user-profile').style.display = 'none';
         userData = null;
+        console.log("[Auth] User logged out");
       }
     });
   }
@@ -3629,6 +3654,7 @@
   function trackEvent(name, params = {}) {
     if (analytics) {
       analytics.logEvent(name, params);
+      console.log(`[Analytics] ${name}`, params);
     }
   }
 
@@ -3655,6 +3681,7 @@
     const doc = await userRef.get();
 
     if (!doc.exists) {
+      console.log("[Auth] Creating new profile for:", user.email);
       // Create new profile with 24h trial
       const newProfile = {
         email: user.email,
@@ -3671,8 +3698,10 @@
         ...newProfile, 
         trialStartedAt: { seconds: Math.floor(Date.now() / 1000) } 
       };
+      console.log("[Auth] Trial activated for new user");
     } else {
       userData = doc.data();
+      console.log("[Auth] Profile synced:", userData.plan);
       // Auto-check for trial expiry
       if (userData.plan === 'trial') {
         const start = userData.trialStartedAt.seconds * 1000;
@@ -3701,6 +3730,7 @@
       
       if (doc.exists) {
         const data = doc.data();
+        console.log("[Cloud] Loading trade data...");
         
         // Populate global state from cloud
         HIST = data.hist || [];
@@ -3718,6 +3748,7 @@
         updateWinRate();
         buildAnalytics();
       } else {
+        console.log("[Cloud] No existing trade data. Preparing first sync...");
         saveTradeDataToCloud(); // Save current local state as the baseline
       }
     } catch (e) {
@@ -3746,6 +3777,7 @@
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       
+      console.log("[Cloud] Trade data synced successfully");
     } catch (e) {
       console.error("[Cloud] Sync save error:", e.message);
     } finally {
@@ -4029,7 +4061,7 @@
     // Hide/show affiliate banner and ad slots
     const affBar = document.getElementById('aff-bar');
     if (affBar) affBar.style.display = isPro ? 'none' : '';
-    document.querySelectorAll('.partner-card').forEach(el => el.classList.toggle('hide', isPro));
+    document.querySelectorAll('.ad-slot').forEach(el => el.classList.toggle('hide', isPro));
     // Update Go PRO button
     const btn = document.getElementById('go-pro-btn');
     if (btn) {
@@ -4101,6 +4133,7 @@
       const isPro = checkProStatus();
       const currentUIPro = document.getElementById('go-pro-btn')?.classList.contains('pro-active');
       if (currentUIPro && !isPro) {
+        console.log("[Auth] Trial expired, locking features...");
         applyProStatus();
         showToast("🔔 Your 24-hour PRO trial has expired. Upgrade to keep using premium tools!", "warning", 10000);
       }
@@ -4983,8 +5016,7 @@
     document.getElementById('obChart').chart_built = true;
     document.getElementById('obChart').current_pair = cPair;
 
-    const pd2_raw = PAIRS.find(d => d.p === cPair) || { price: 100, sig: 0 };
-    const pd2 = { ...pd2_raw, sig: pd2_raw.sig !== undefined ? pd2_raw.sig : calcSig(pd2_raw) };
+    const pd2 = PAIRS.find(d => d.p === cPair) || { price: 100, sig: 0 };
     const baseP = pd2.price;
     const precision = pd(cPair);
     
@@ -6261,12 +6293,13 @@
   tick();
   checkWelcomePopup();
   loadPair(activePair);
-  fetchLiveListings();
-  setInterval(fetchLiveListings, 60000);
 
-  // Service Worker Registration for PWA & Cache Busting
+  // ✅ Register Service Worker for PWA/offline support
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js?v=17.1')
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js?v=18.0')
+.catch(() => {});
+    });
   }
 
   /* ═══════════ KEYBOARD SHORTCUTS ═══════════ */
@@ -6325,7 +6358,7 @@
       <b>⚠️ RISK DISCLOSURE:</b> Trading cryptocurrencies carries a high level of risk and may not be suitable for all investors. The high degree of leverage can work against you as well as for you. Before deciding to trade, you should carefully consider your investment objectives, level of experience, and risk appetite. The signals provided by AltScalp PRO are for educational purposes only and do not constitute financial advice.
     </div>
     <div style="margin-top:20px; font-size:9px; color:var(--td); opacity:0.5">
-      Powered by Institutional AI & Deep Learning Model v17.1
+      Powered by Institutional AI & Deep Learning Model v18.0
     </div>
   </footer>
 </body>
