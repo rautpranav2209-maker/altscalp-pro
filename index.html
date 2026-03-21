@@ -2215,6 +2215,34 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     
+    .go-pro-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      border-radius: 4px;
+      font-family: var(--fn);
+      font-weight: 800;
+      font-size: 11px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      border: 1px solid rgba(0, 229, 160, .35);
+      background: rgba(0, 229, 160, .12);
+      color: var(--g);
+      transition: all .15s;
+      text-decoration: none;
+    }
+    .go-pro-btn:hover {
+      background: rgba(0, 229, 160, .22);
+      transform: translateY(-1px);
+    }
+    .go-pro-btn.pro-active {
+      border-color: rgba(167, 139, 250, .35);
+      background: rgba(167, 139, 250, .12);
+      color: var(--pu);
+    }
+
     .auth-switch {
       color: var(--tm);
       margin-top: 16px;
@@ -2237,6 +2265,7 @@
   </script>
 </head>
 
+<body>
 <!-- Toast container -->
 <div class="toast-container" id="toast-container"></div>
 <!-- Modal container -->
@@ -2328,7 +2357,6 @@
     </div>
   </div>
 </div>
-</div>
 
 <!-- ══════════ AFFILIATE BANNER ══════════ -->
 <div class="aff-bar" id="aff-bar">
@@ -2340,20 +2368,10 @@
   <div class="aff-sep"></div>
   <a class="aff-btn aff-byb" href="https://www.bybit.com/invite?ref=PLZV4AL" target="_blank" rel="noopener">🟠 Bybit —
     Up to 30% Rebate</a>
-  <div class="aff-sep"></div>
-  <a class="aff-btn aff-kuc" href="https://www.kucoin.com/r/YOUR_KUCOIN_REF" target="_blank" rel="noopener">🟢 KuCoin
-    — Up to 40% Commission</a>
-  <div class="aff-sep"></div>
-  <a class="aff-btn aff-okx" href="https://www.okx.com/join/YOUR_OKX_REF" target="_blank" rel="noopener">🔵 OKX — Up
-    to 30% Bonus</a>
-  <div class="aff-sep"></div>
-  <a class="aff-btn aff-mex" href="https://www.mexc.com/register?inviteCode=YOUR_MEXC_REF" target="_blank"
-    rel="noopener">🔴 MEXC — Up to 50% Fee Back</a>
+
 </div>
 
-<!-- Google AdSense Script (replace YOUR_ADSENSE_ID with your publisher ID) -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR_ADSENSE_ID"
-  crossorigin="anonymous"></script>
+<!-- Google AdSense: Paste your real script tag here when you have a publisher ID -->
 
 <!-- NAV -->
 <nav class="nav">
@@ -2749,11 +2767,11 @@
           <div class="stat-l" data-tip="Strongest signal across all pairs">Top signal</div>
           <div class="stat-v" id="m-top">—</div>
         </div>
-    <div class="footer">
+    <div class="footer" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
-        <div>© 2024 AltScalp PRO · <span style="opacity:.5">v12.0</span></div>
+        <div>© 2026 AltScalp PRO · <span style="opacity:.5">v12.0</span></div>
         <div id="sync-status" style="font-size:9px;color:var(--tm);margin-left:15px;display:none">☁ Syncing...</div>
-        <div id="clk">00:00:00</div>
+        <div id="clk-inline">00:00:00</div>
       </div>
     </div>
         <div class="stat">
@@ -3825,6 +3843,7 @@
 
   /* ═══════════ PRO SUBSCRIPTION LOGIC ═══════════ */
   const RAZORPAY_KEY_ID = 'rzp_live_STYbFDrNrl1V0a'; // Live Production Key
+  const PRO_ACCESS_CODE = ''; // Set a secret code here if needed, e.g. 'ALTSCALP2026'
   const PLAN_PRICES = {
     monthly: 64000,  // Exact ₹640 for $7
     yearly: 455000   // Exact ₹4550 for $50
@@ -3976,7 +3995,7 @@
       document.getElementById('win-tracker-content').style.display = isPro ? 'block' : 'none';
     }
 
-    // Hide activation area if already pro
+    // Hide activation area if already pro (element may not exist)
     const actArea = document.getElementById('pro-activation-area');
     if (actArea) actArea.style.display = isPro ? 'none' : 'block';
 
@@ -4036,8 +4055,7 @@
       }
     }, 60000);
 
-    // Init AdSense
-    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) { }
+    // AdSense init disabled until publisher ID is configured
   });
 
   /* ── Toast Notification System ── */
@@ -4316,7 +4334,7 @@
   function calcSig(d) { const r = d.chg * 1.9 + d.ob * 1.5 + (d.rsi - 50) * 0.038 + d.vd * 1.3 + d.fr * 18 + d.sent * 0.9 + spen(d.sp); return +(r * vpen(d.vol) * lpen(d.liq)).toFixed(3) }
   function sigColor(s) { return s >= 0 ? '#00e5a0' : '#ff4560' }
   function sigBt(s) { return s > 2 ? 'STRONG LONG' : s > 0.5 ? 'LONG' : s < -2 ? 'STRONG SHORT' : s < -0.5 ? 'SHORT' : 'WAIT' }
-  function fp(p) { return p < 0.0001 ? p.toFixed(7) : p < 0.01 ? p.toFixed(5) : p < 1 ? p.toFixed(4) : p < 100 ? p.toFixed(2) : p.toLocaleString() }
+  function fpLegacy(p) { return p < 0.0001 ? p.toFixed(7) : p < 0.01 ? p.toFixed(5) : p < 1 ? p.toFixed(4) : p < 100 ? p.toFixed(2) : p.toLocaleString() }
 
   /* ═══════════ SCANNER (uses global PAIRS) ═══════════ */
   function setCat(cat, el) { curCat = cat; searchMode = ''; document.getElementById('coin-search').value = ''; document.querySelectorAll('#cat-tabs .ctab').forEach(t => t.classList.remove('active')); el.classList.add('active'); buildScanner(); buildCorrBars() }
@@ -5027,7 +5045,8 @@
     
     // Tie model stats to HIST - 100% REAL DATA ONLY
     const samples = HIST.length * 5; // Simplified real metric
-    const accuracy = HIST.length > 5 ? (wins / HIST.length * 100).toFixed(1) : '0.0';
+    const mlWins = HIST.filter(h => h.pnl > 0).length;
+    const accuracy = HIST.length > 5 ? (mlWins / HIST.length * 100).toFixed(1) : '0.0';
     
     const sEl = document.getElementById('ml-samples'); if(sEl) sEl.textContent = samples.toLocaleString();
     const aEl = document.getElementById('ml-accuracy'); if(aEl) aEl.textContent = accuracy + '%';
@@ -5652,6 +5671,16 @@
   /* ═══════════ TRADINGVIEW ADVANCED CHART EMBED ═══════════ */
 
   function initChart() {
+    // Assign canvas elements and 2D contexts
+    const mcEl = document.getElementById('tv-canvas');
+    const vcEl = document.getElementById('vol-canvas');
+    const rcEl = document.getElementById('rsi-canvas');
+    const dcEl = document.getElementById('macd-canvas');
+    if (mcEl) { mC = mcEl; mX = mcEl.getContext('2d'); }
+    if (vcEl) { vC = vcEl; vX = vcEl.getContext('2d'); }
+    if (rcEl) { rC = rcEl; rX = rcEl.getContext('2d'); }
+    if (dcEl) { dC = dcEl; dX = dcEl.getContext('2d'); }
+
     cData = genC(cPair, cTF);
     buildML(); updSigOverlay(); renderOrders(); renderHist(); updCapDisplay(); refreshOF(); setOS('long');
     if (tkr) clearInterval(tkr);
@@ -6088,7 +6117,7 @@
   const debouncedRender = debounce(() => { renderDD(); refreshVolChart(); }, 50);
   ['i-pc', 'i-ob', 'i-rsi', 'i-vd', 'i-fr', 'i-sp', 'i-sent', 'i-liq', 'i-vol', 'i-corr'].forEach(id => document.getElementById(id).addEventListener('input', debouncedRender));
 
-  // Load persisted state
+  // Load persisted state (single call)
   PAIRS = STATIC_PAIRS;
   loadState();
   loadPrefs();
@@ -6151,10 +6180,6 @@
   /* ═══════════ INIT ═══════════ */
   tick();
   checkWelcomePopup();
-  loadState();
-  loadPrefs();
-  fetchLiveListings();
-  setInterval(fetchLiveListings, 60000); // Live data refresh every 60s
   loadPair(activePair);
 
   /* ═══════════ KEYBOARD SHORTCUTS ═══════════ */
@@ -6178,6 +6203,13 @@
 
   // Save prefs when leaving page
   window.addEventListener('beforeunload', () => { saveState(); savePrefs(); });
+
+  // Service Worker Registration for PWA & Cache Busting
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js?v=13')
+      .then(reg => console.log('[SW] Registered v13'))
+      .catch(err => console.log('[SW] Failure', err));
+  }
 
 </script>
   <!-- ══════════ FOOTER & LEGAL ══════════ -->
@@ -6208,7 +6240,7 @@
       <b>⚠️ RISK DISCLOSURE:</b> Trading cryptocurrencies carries a high level of risk and may not be suitable for all investors. The high degree of leverage can work against you as well as for you. Before deciding to trade, you should carefully consider your investment objectives, level of experience, and risk appetite. The signals provided by AltScalp PRO are for educational purposes only and do not constitute financial advice.
     </div>
     <div style="margin-top:20px; font-size:9px; color:var(--td); opacity:0.5">
-      Powered by Institutional AI & Deep Learning Model v4.2.0
+      Powered by Institutional AI & Deep Learning Model v13.0
     </div>
   </footer>
 </body>
