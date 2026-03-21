@@ -5358,7 +5358,7 @@
   }
 
   function buildML() {
-    const CEX_EXCHANGES = ['binance', 'bybit', 'kucoin', 'okx', 'mexc', 'gate', 'kraken', 'coinbase', 'huobi', 'bitget', 'bingx'];
+    const CEX_EXCHANGES = ['binance', 'bybit', 'gate', 'kraken', 'coinbase', 'huobi', 'bitget', 'bingx'];
     let list = PAIRS.map(d => ({ ...d, sig: calcSig(d) }))
       // Only show tokens listed on a real broker/CEX, OR tokens the user explicitly searched for (which might have dexId)
       .filter(d => {
@@ -5783,6 +5783,8 @@
   }
 
   async function loadTVChart(pair, tf) {
+    if (window.lastTV && window.lastTV === pair + tf) return;
+    window.lastTV = pair + tf;
     const container = document.getElementById('tv-widget-container');
     if (!container) return;
 
@@ -5799,9 +5801,6 @@
       const exStr = pd.ex.toLowerCase();
       if (exStr.includes('binance')) exchange = 'BINANCE';
       else if (exStr.includes('bybit')) exchange = 'BYBIT';
-      else if (exStr.includes('kucoin')) exchange = 'KUCOIN';
-      else if (exStr.includes('okx')) exchange = 'OKX';
-      else if (exStr.includes('mexc')) exchange = 'MEXC';
       else if (exStr.includes('gate')) exchange = 'GATEIO';
       else if (exStr.includes('kraken')) exchange = 'KRAKEN';
       else if (exStr.includes('coinbase')) exchange = 'COINBASE';
@@ -5854,7 +5853,7 @@
 
     const script = document.createElement('script');
     script.type = 'text/javascript';
-    script.src = `https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js?t=${Date.now()}`;
+    script.src = `https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js`;
     script.async = true;
     script.innerHTML = JSON.stringify(config);
     wrapper.appendChild(script);
@@ -6359,7 +6358,7 @@
       <b>⚠️ RISK DISCLOSURE:</b> Trading cryptocurrencies carries a high level of risk and may not be suitable for all investors. The high degree of leverage can work against you as well as for you. Before deciding to trade, you should carefully consider your investment objectives, level of experience, and risk appetite. The signals provided by AltScalp PRO are for educational purposes only and do not constitute financial advice.
     </div>
     <div style="margin-top:20px; font-size:9px; color:var(--td); opacity:0.5">
-      Powered by Institutional AI & Deep Learning Model v19.1
+      Powered by Institutional AI & Deep Learning Model v19.2
     </div>
   </footer>
 </body>
