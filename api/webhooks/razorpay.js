@@ -1,14 +1,18 @@
+/**
+ * AltScalp PRO — Razorpay Webhook (Backup Payment Confirmation)
+ * ✅ Signature verified with HMAC-SHA256 (cannot be faked)
+ * ✅ Runs server-side — users cannot trigger this
+ * ✅ Deduplication prevents double upgrades
+ */
+
+const crypto = require('crypto');
 const admin = require('firebase-admin');
 
-// IMPORTANT: Set these Environment Variables in Vercel
-// FIREBASE_SERVICE_ACCOUNT (Base64 string of your service account JSON)
-// RAZORPAY_WEBHOOK_SECRET
-
 if (!admin.apps.length) {
-  const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString());
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
+  const serviceAccount = JSON.parse(
+    Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString()
+  );
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 }
 
 const db = admin.firestore();
@@ -16,55 +20,76 @@ const db = admin.firestore();
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
-  const event = req.body;
-  
-  // Basic validation of the event structure
-  if (event.event === 'payment.captured') {
-    const payment = event.payload.payment.entity;
-    const email = payment.email;
-    const amount = payment.amount; // in paise
-    const paymentId = payment.id;
+  // ✅ SECURITY: Verify Razorpay webhook signature
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  const signature = req.headers['x-razorpay-signature'];
+  const rawBody = JSON.stringify(req.body);
 
-    try {
-      // 1. Find the user by email in Firestore
-      const usersRef = db.collection('users');
-      const snapshot = await usersRef.where('email', '==', email).limit(1).get();
-
-      if (snapshot.empty) {
-        console.error(`User with email ${email} not found for payment ${paymentId}`);
-        return res.status(404).json({ status: 'user_not_found' });
-      }
-
-      const userDoc = snapshot.docs[0];
-      const userId = userDoc.id;
-
-      // 2. Determine plan and expiry based on amount
-      let plan = 'monthly';
-      let monthsToAdd = 1;
-      if (amount === 455000) { // ₹4,550
-        plan = 'yearly';
-        monthsToAdd = 12;
-      }
-
-      const expiryDate = new Date();
-      expiryDate.setMonth(expiryDate.getMonth() + monthsToAdd);
-
-      // 3. Update User to PRO
-      await usersRef.doc(userId).update({
-        isPro: true,
-        plan: plan,
-        expiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
-        lastPaymentId: paymentId,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      console.log(`Successfully upgraded ${email} to PRO via webhook.`);
-      return res.status(200).json({ status: 'success' });
-    } catch (error) {
-      console.error('Webhook Error:', error);
-      return res.status(500).json({ status: 'error', message: error.message });
-    }
+  if (!signature || !webhookSecret) {
+    console.error('[webhook] Missing signature or secret');
+    return res.status(400).json({ status: 'missing_signature' });
   }
 
-  res.status(200).json({ status: 'ignored' });
+  const expectedSig = crypto
+    .createHmac('sha256', webhookSecret)
+    .update(rawBody)
+    .digest('hex');
+
+  if (expectedSig !== signature) {
+    console.error('[webhook] INVALID SIGNATURE — possible fake request');
+    return res.status(400).json({ status: 'invalid_signature' });
+  }
+
+  const event = req.body;
+  if (event.event !== 'payment.captured') {
+    return res.status(200).json({ status: 'ignored' });
+  }
+
+  const payment = event.payload.payment.entity;
+  const paymentId = payment.id;
+  const orderId = payment.order_id;
+  const email = payment.email;
+  const amount = payment.amount;
+
+  try {
+    // ✅ Deduplication — skip if already processed
+    const paymentRef = db.collection('payments').doc(paymentId);
+    const existing = await paymentRef.get();
+    if (existing.exists) {
+      console.log(`[webhook] Already processed: ${paymentId}`);
+      return res.status(200).json({ status: 'already_processed' });
+    }
+
+    const usersSnap = await db.collection('users').where('email', '==', email).limit(1).get();
+    if (usersSnap.empty) {
+      console.error(`[webhook] User not found: ${email}`);
+      return res.status(404).json({ status: 'user_not_found' });
+    }
+
+    const uid = usersSnap.docs[0].id;
+    let plan = amount === 455000 ? 'yearly' : 'monthly';
+    const expiryDate = new Date();
+    if (plan === 'yearly') expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    else expiryDate.setMonth(expiryDate.getMonth() + 1);
+
+    const batch = db.batch();
+    batch.update(db.collection('users').doc(uid), {
+      isPro: true, plan,
+      expiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
+      lastPaymentId: paymentId,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    batch.set(paymentRef, {
+      uid, email, orderId, paymentId, plan, amount,
+      source: 'webhook',
+      verifiedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+    await batch.commit();
+
+    console.log(`[webhook] ✅ PRO activated for ${email} (${plan})`);
+    return res.status(200).json({ status: 'success' });
+  } catch (err) {
+    console.error('[webhook] Error:', err.message);
+    return res.status(500).json({ status: 'error', message: err.message });
+  }
 };
