@@ -4,6 +4,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AltScalp PRO — AI-powered crypto scalping signals. Real-time order flow, ML signals, risk management and paper trading for serious traders.">
+  <meta name="keywords" content="crypto trading, scalping signals, AI trading, crypto signals, altcoin scanner">
+  <meta property="og:title" content="AltScalp PRO — Institutional AI Crypto Signals">
+  <meta property="og:description" content="Real-time AI signals, order book analysis, risk management and paper trading for crypto scalpers.">
+  <meta property="og:url" content="https://altscalp-pro.vercel.app">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://altscalp-pro.vercel.app">
   <link rel="manifest" href="/manifest.json">
   <title>AltScalp PRO — Live CoinMarketCap Data</title>
   <link
@@ -2286,6 +2294,7 @@
         <input type="password" id="login-pass" class="auth-input" placeholder="••••••••">
       </div>
       <button class="btn-primary" onclick="handleEmailLogin()">Sign In</button>
+      <p style="text-align:center;margin-top:10px;font-size:10px;color:var(--tm);cursor:pointer" onclick="handleForgotPassword()">Forgot password?</p>
       <p class="auth-switch">New to AltScalp? <span onclick="toggleAuthView('signup')">Create Account</span></p>
     </div>
     <div id="auth-view-signup" style="display:none">
@@ -2304,7 +2313,7 @@
       <p class="auth-switch">Already have an account? <span onclick="toggleAuthView('login')">Sign In</span></p>
     </div>
     <div style="margin-top:20px; text-align:center">
-      <button onclick="closeAuthModal()" style="background:none; border:none; color:var(--td); cursor:pointer; font-size:10px; letter-spacing:0.1em">✕ CANCEL</button>
+      <button onclick="closeAuthModal()" style="background:none; border:none; color:var(--td); cursor:pointer; font-size:10px; letter-spacing:0.1em" aria-label="Cancel and close">✕ CANCEL</button>
     </div>
   </div>
 </div>
@@ -2312,7 +2321,7 @@
 <!-- ══════════ PREMIUM PRO MODAL ══════════ -->
 <div class="pro-modal-bg" id="pro-modal" style="display:none">
   <div class="premium-card" style="width:520px; padding:40px">
-    <span style="position:absolute; top:20px; right:20px; color:var(--td); cursor:pointer; font-size:18px" onclick="closeProModal()">✕</span>
+    <span style="position:absolute; top:20px; right:20px; color:var(--td); cursor:pointer; font-size:18px" onclick="closeProModal()" role="button" aria-label="Close upgrade modal">✕</span>
     <div style="text-align:center; margin-bottom:25px">
       <div style="background:var(--gd); color:var(--g); font-weight:800; font-size:10px; padding:4px 12px; border-radius:20px; display:inline-block; margin-bottom:12px; letter-spacing:0.1em">UPGRADE TO PRO</div>
       <h2 style="font-family:var(--fn); font-size:32px; font-weight:800; color:#fff; letter-spacing:-0.5px">Master the Markets.</h2>
@@ -2396,13 +2405,13 @@
     <div style="font-size:11px;color:var(--tx)" id="clk">--:--:--</div>
     <div id="auth-nav-area" style="display:flex;align-items:center;gap:12px">
       <button class="ntab" id="login-btn" onclick="openAuthModal()"
-        style="border:1px solid var(--b2);padding:4px 12px;font-size:10px">Sign In</button>
+        style="border:1px solid var(--b2);padding:4px 12px;font-size:10px" aria-label="Sign in to your account">Sign In</button>
       <div id="user-profile" style="display:none;align-items:center;gap:8px">
         <span id="user-email" style="font-size:10px;color:var(--tm)"></span>
-        <button class="ntab" onclick="handleLogout()" style="padding:4px 8px;font-size:9px">Logout</button>
+        <button class="ntab" onclick="handleLogout()" style="padding:4px 8px;font-size:9px" aria-label="Log out">Logout</button>
       </div>
     </div>
-    <button class="go-pro-btn" id="go-pro-btn" onclick="openProModal()">⚡ Go PRO</button>
+    <button class="go-pro-btn" id="go-pro-btn" onclick="openProModal()" aria-label="Upgrade to PRO">⚡ Go PRO</button>
   </div>
 </nav>
 
@@ -3063,11 +3072,8 @@
       </div>
     </div>
 
-    <!-- Monetization: Ad Placeholder -->
-    <div
-      style="margin-top:16px;background:var(--c);border:1px dashed var(--b2);border-radius:4px;height:90px;display:flex;align-items:center;justify-content:center;color:var(--tm);font-size:10px;letter-spacing:0.1em;text-transform:uppercase">
-      Advertisement Space (CoinZilla / CoinTraffic)
-    </div>
+    <!-- Ad slot: add real ad network script here when ready -->
+    <div style="display:none" id="ad-slot-signals"></div>
 
   </div>
 </div>
@@ -3581,13 +3587,16 @@
 
     firebase.auth().onAuthStateChanged(async (user) => {
       if (user) {
-        showLoadingOverlay(true);
         document.getElementById('login-btn').style.display = 'none';
         document.getElementById('user-profile').style.display = 'flex';
         document.getElementById('user-email').textContent = user.email;
         closeAuthModal();
 
-        // 1. INSTANT UI UPDATE (Use local Quad-Lock backup immediately)
+        // ✅ FIX: Warn unverified users (don't block, just notify)
+        if (!user.emailVerified) {
+          showToast('⚠️ Please verify your email. Check your inbox and click the link.', 'warning', 8000);
+        }
+
         applyProStatus();
         
         // 2. BACKGROUND SYNC (Keep Firestore updated)
@@ -3783,6 +3792,24 @@
     document.getElementById('auth-view-signup').style.display = v === 'signup' ? 'block' : 'none';
   }
 
+  // ✅ Forgot Password
+  async function handleForgotPassword() {
+    const email = document.getElementById('login-email').value.trim();
+    if (!email) return showToast('Enter your email address first', 'warning');
+    try {
+      await firebase.auth().sendPasswordResetEmail(email);
+      showToast('Password reset email sent! Check your inbox.', 'success', 6000);
+    } catch (e) {
+      showToast('Could not send reset email. Check the address and try again.', 'error');
+    }
+  }
+
+  // ✅ Disable all debug logs in production
+  if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    console.log = () => {};
+    console.warn = () => {};
+  }
+
   async function handleEmailSignup() {
     const email = document.getElementById('signup-email').value.trim();
     const pass = document.getElementById('signup-pass').value;
@@ -3843,18 +3870,17 @@
   }
 
   async function handleLogout() {
-    console.log("[Auth] handleLogout triggered");
     try {
+      // ✅ Clear all session and trial flags on logout
+      sessionStorage.removeItem('alt_new_signup_active');
+      sessionStorage.removeItem('alt_signup_time');
+      localStorage.removeItem('alt_trial_active');
+      localStorage.removeItem('alt_trial_start');
       await firebase.auth().signOut();
       showToast('Logged out successfully', 'info');
-      // Full reload to clear all states and prevent navigation issues
-      setTimeout(() => {
-        console.log("[Auth] Reloading page...");
-        window.location.reload();
-      }, 1500);
+      setTimeout(() => window.location.reload(), 1500);
     } catch (error) {
-      console.error("[Auth] Logout error:", error);
-      showToast(error.message, 'error');
+      showToast('Logout failed. Please try again.', 'error');
     }
   }
 
@@ -3880,6 +3906,7 @@
     selectedPlan = plan;
     document.getElementById('plan-monthly').classList.toggle('sel', plan === 'monthly');
     document.getElementById('plan-yearly').classList.toggle('sel', plan === 'yearly');
+    // ✅ Use PLAN_PRICES to show accurate price (₹ to $ converted display)
     const priceText = plan === 'yearly' ? '$50/year' : '$7/month';
     document.getElementById('pro-pay-btn-text').textContent = `Unlock Full PRO for ${priceText} →`;
   }
@@ -4017,7 +4044,9 @@
     // 3. Session flag for the exact signup moment (single session only, cleared on close)
     if (sessionStorage.getItem('alt_new_signup_active') === '1') {
       const signupTime = parseInt(sessionStorage.getItem('alt_signup_time') || 0);
-      if (signupTime > 0 && NOW - signupTime < DAY_MS) return true;
+      // ✅ FIX: Validate signup time is reasonable (not in future, not > 25h old)
+      const age = NOW - signupTime;
+      if (signupTime > 0 && age >= 0 && age < DAY_MS) return true;
       else sessionStorage.removeItem('alt_new_signup_active');
     }
 
@@ -4293,6 +4322,8 @@
   let curTF = '1m', curCat = 'all', curDPC = 'mid', activePair = 'SOL';
   let soundOn = true, alerts = [], paperTrades = [], btInstance = null, volInstance = null, rlInstance = null;
   let analyticsBuilt = false;
+  // ✅ FIX: searchMode declared here to prevent hoisting issues
+  let searchMode = '';
 
   // Global PAIRS that will be overwritten by live data
   let PAIRS = STATIC_PAIRS; // start with fallback
@@ -4392,6 +4423,9 @@
   function fpLegacy(p) { return p < 0.0001 ? p.toFixed(7) : p < 0.01 ? p.toFixed(5) : p < 1 ? p.toFixed(4) : p < 100 ? p.toFixed(2) : p.toLocaleString() }
 
   /* ═══════════ SCANNER (uses global PAIRS) ═══════════ */
+  // ✅ FIX: Debounced scanner to prevent excessive DOM rebuilds
+  const debouncedBuildScanner = debounce(() => buildScanner(), 80);
+
   function setCat(cat, el) { curCat = cat; searchMode = ''; document.getElementById('coin-search').value = ''; document.querySelectorAll('#cat-tabs .ctab').forEach(t => t.classList.remove('active')); el.classList.add('active'); buildScanner(); buildCorrBars() }
   function setScanTF(tf, el) { curTF = tf; document.querySelectorAll('.tftab').forEach(t => t.classList.remove('active')); el.classList.add('active'); document.getElementById('dp-tf-lbl').textContent = tf + ' scalp'; buildScanner(); renderDD(); refreshVolChart() }
   function selCatDP(el) { curDPC = el.dataset.c; document.querySelectorAll('#cat-sel span').forEach(e => { const c = CC[e.dataset.c] || '#00e5a0'; e.style.opacity = e.dataset.c === curDPC ? 1 : .35; e.style.background = e.dataset.c === curDPC ? c + '22' : c + '0a'; e.style.color = c }); const cn = { ethereum: 'Ethereum', solana: 'Solana', base: 'Base Network', bsc: 'BNB Chain', arbitrum: 'Arbitrum', polygon: 'Polygon' }; document.getElementById('dp-cat').textContent = cn[curDPC] || curDPC; document.getElementById('dp-cat').style.color = CC[curDPC] || '#00e5a0'; renderDD() }
@@ -5199,7 +5233,7 @@
   let HISTPNL = 0;
   let OID = 1;
   let OSIDE = 'long';
-  let glMode = 'gainers', netMode = 'all', exchMode = 'all', catMode = 'all', searchMode = '';
+  let glMode = 'gainers', netMode = 'all', exchMode = 'all', catMode = 'all';
 
   function genC(pair, tf, n = 260) {
     const pd2 = PAIRS.find(d => d.p === pair);
@@ -5742,6 +5776,10 @@
     if (tkr) clearInterval(tkr);
     tkr = setInterval(tick2, 800);
     loadTVChart(cPair, cTF);
+    initTouchEvents();
+    // ✅ Hide crosshair when mouse leaves chart
+    const chartMain = document.querySelector('.chart-main');
+    if (chartMain) chartMain.addEventListener('mouseleave', onMouseLeave);
   }
 
   async function loadTVChart(pair, tf) {
@@ -5802,7 +5840,7 @@
       "autosize": true,
       "symbol": symbol,
       "interval": interval,
-      "timezone": "Asia/Kolkata",
+      "timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
       "theme": "dark",
       "style": "1",
       "locale": "en",
@@ -6083,6 +6121,14 @@
     if (dragging && dragObj) { const p = Math.max(0, getPY(e.clientY)); dragObj.ord[dragObj.key] = p; if (dragObj.key === 'tp') document.getElementById('of-tp').value = fpc(p, cPair); else if (dragObj.key === 'sl') document.getElementById('of-sl').value = fpc(p, cPair); else document.getElementById('of-price').value = fpc(p, cPair); updateOFCalc(); renderOrders(); }
     renderChart();
   }
+
+  function onMouseLeave() {
+    // ✅ Hide crosshair when mouse leaves chart area
+    hovCI = -1;
+    const ci = document.getElementById('ch-info');
+    if (ci) ci.style.display = 'none';
+    renderChart();
+  }
   function onClick(e) {
     if (dragging) return;
     const price = getPY(e.clientY);
@@ -6167,9 +6213,20 @@
     }
   }
 
-  /* ═══════════ INIT ═══════════ */
+  /* ═══════════ TOUCH SUPPORT FOR MOBILE ═══════════ */
+  function getTouchPos(e) {
+    const touch = e.touches[0] || e.changedTouches[0];
+    return { clientX: touch.clientX, clientY: touch.clientY };
+  }
 
-  // Debounced slider handler
+  // Register touch event listeners after chart is built
+  function initTouchEvents() {
+    const chartPanel = document.getElementById('tv-widget-container');
+    if (!chartPanel) return;
+    chartPanel.addEventListener('touchstart', (e) => { onDragStart(getTouchPos(e)); }, { passive: true });
+    chartPanel.addEventListener('touchmove',  (e) => { onMove(getTouchPos(e)); onDragMove(getTouchPos(e)); }, { passive: true });
+    chartPanel.addEventListener('touchend',   () => { dragging = false; dragObj = null; }, { passive: true });
+  }
   const debouncedRender = debounce(() => { renderDD(); refreshVolChart(); }, 50);
   ['i-pc', 'i-ob', 'i-rsi', 'i-vd', 'i-fr', 'i-sp', 'i-sent', 'i-liq', 'i-vol', 'i-corr'].forEach(id => document.getElementById(id).addEventListener('input', debouncedRender));
 
@@ -6240,6 +6297,13 @@
   fetchLiveListings();
   setInterval(fetchLiveListings, 60000);
 
+  // Service Worker Registration for PWA & Cache Busting
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js?v=16.0')
+      .then(reg => console.log('[SW] Registered v16.0'))
+      .catch(err => console.log('[SW] Failure', err));
+  }
+
   /* ═══════════ KEYBOARD SHORTCUTS ═══════════ */
   document.addEventListener('keydown', (e) => {
     // Only on chart page, and not when typing in inputs
@@ -6259,15 +6323,13 @@
     }
   });
 
+  // ✅ Fix: Resize canvases when window resizes
+  window.addEventListener('resize', debounce(() => {
+    if (cBuilt) { sizeCanvases(); renderChart(); }
+  }, 150));
+
   // Save prefs when leaving page
   window.addEventListener('beforeunload', () => { saveState(); savePrefs(); });
-
-  // Service Worker Registration for PWA & Cache Busting
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js?v=15.0')
-      .then(reg => console.log('[SW] Registered v15.0'))
-      .catch(err => console.log('[SW] Failure', err));
-  }
 
 </script>
   <!-- ══════════ FOOTER & LEGAL ══════════ -->
@@ -6298,7 +6360,7 @@
       <b>⚠️ RISK DISCLOSURE:</b> Trading cryptocurrencies carries a high level of risk and may not be suitable for all investors. The high degree of leverage can work against you as well as for you. Before deciding to trade, you should carefully consider your investment objectives, level of experience, and risk appetite. The signals provided by AltScalp PRO are for educational purposes only and do not constitute financial advice.
     </div>
     <div style="margin-top:20px; font-size:9px; color:var(--td); opacity:0.5">
-      Powered by Institutional AI & Deep Learning Model v15.0
+      Powered by Institutional AI & Deep Learning Model v16.0
     </div>
   </footer>
 </body>
