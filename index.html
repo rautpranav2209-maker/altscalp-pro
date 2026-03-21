@@ -4183,8 +4183,8 @@
     if (btn) {
       btn.textContent = isPro ? '⚡ PRO Active' : '⚡ Go PRO';
       btn.classList.toggle('pro-active', isPro);
-      if (isPro) btn.onclick = () => showToast('You have an active PRO subscription!', 'success');
-      else btn.onclick = openProModal;
+      // ✅ FIX: Always allow opening the modal so trial users can upgrade/pay
+      btn.onclick = openProModal;
     }
     // Update win tracker
     const winTracker = document.getElementById('pro-win-tracker');
@@ -6493,7 +6493,7 @@
       <b>⚠️ RISK DISCLOSURE:</b> Trading cryptocurrencies carries a high level of risk and may not be suitable for all investors. The high degree of leverage can work against you as well as for you. Before deciding to trade, you should carefully consider your investment objectives, level of experience, and risk appetite. The signals provided by AltScalp PRO are for educational purposes only and do not constitute financial advice.
     </div>
     <div style="margin-top:20px; font-size:9px; color:var(--td); opacity:0.5">
-      Powered by Institutional AI & Deep Learning Model v19.4
+      Powered by Institutional AI & Deep Learning Model v19.5
     </div>
   </footer>
 </body>
