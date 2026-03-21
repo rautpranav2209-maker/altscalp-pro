@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="/manifest.json?v=14">
   <title>AltScalp PRO — Live CoinMarketCap Data</title>
   <link
     href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap"
@@ -6204,10 +6204,10 @@
   // Save prefs when leaving page
   window.addEventListener('beforeunload', () => { saveState(); savePrefs(); });
 
-  // Service Worker Registration for PWA & Cache Busting
+  // Service Worker Registration for PWA & Cache Busting (Restored)
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js?v=13')
-      .then(reg => console.log('[SW] Registered v13'))
+    navigator.serviceWorker.register('/service-worker.js?v=14')
+      .then(reg => console.log('[SW] Registered v14'))
       .catch(err => console.log('[SW] Failure', err));
   }
 
@@ -6240,7 +6240,7 @@
       <b>⚠️ RISK DISCLOSURE:</b> Trading cryptocurrencies carries a high level of risk and may not be suitable for all investors. The high degree of leverage can work against you as well as for you. Before deciding to trade, you should carefully consider your investment objectives, level of experience, and risk appetite. The signals provided by AltScalp PRO are for educational purposes only and do not constitute financial advice.
     </div>
     <div style="margin-top:20px; font-size:9px; color:var(--td); opacity:0.5">
-      Powered by Institutional AI & Deep Learning Model v13.0
+      Powered by Institutional AI & Deep Learning Model v14.0
     </div>
   </footer>
 </body>
