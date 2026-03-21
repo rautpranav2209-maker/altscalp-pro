@@ -99,6 +99,10 @@ module.exports = async (req, res) => {
     if (err.code === 'auth/id-token-expired') {
       return res.status(401).json({ message: 'Session expired. Please sign in again.' });
     }
-    return res.status(500).json({ message: 'Failed to create order. Please try again.' });
+    // ✅ DEBUG: Return actual error message to diagnose backend config
+    return res.status(500).json({ 
+      message: 'Failed to create order: ' + err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined 
+    });
   }
 };
