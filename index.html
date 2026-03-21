@@ -6151,6 +6151,11 @@
   /* ═══════════ INIT ═══════════ */
   tick();
   checkWelcomePopup();
+  loadState();
+  loadPrefs();
+  fetchLiveListings();
+  setInterval(fetchLiveListings, 60000); // Live data refresh every 60s
+  loadPair(activePair);
 
   /* ═══════════ KEYBOARD SHORTCUTS ═══════════ */
   document.addEventListener('keydown', (e) => {
