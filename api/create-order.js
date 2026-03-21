@@ -8,12 +8,19 @@
 const Razorpay = require('razorpay');
 const admin = require('firebase-admin');
 
-// Init Firebase Admin (once)
-if (!admin.apps.length) {
-  const serviceAccount = JSON.parse(
-    Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString()
-  );
-  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+// Init Firebase Admin (defensive)
+try {
+  if (!admin.apps.length) {
+    if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+      throw new Error("Missing FIREBASE_SERVICE_ACCOUNT env var");
+    }
+    const serviceAccount = JSON.parse(
+      Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString()
+    );
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  }
+} catch (e) {
+  console.error("[FATAL] Firebase Init Failed:", e.message);
 }
 
 // Plan prices in paise (INR)
@@ -62,6 +69,11 @@ module.exports = async (req, res) => {
     }
 
     // ✅ SECURITY: Razorpay key only lives in server environment
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      return res.status(500).json({ 
+        message: 'Payment keys missing. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in Vercel settings.' 
+      });
+    }
     const razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID,
       key_secret: process.env.RAZORPAY_KEY_SECRET
