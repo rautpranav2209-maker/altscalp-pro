@@ -95,14 +95,18 @@ module.exports = async (req, res) => {
     });
 
   } catch (err) {
-    console.error('[create-order] Error:', err.message);
+    // ✅ Polymorphic error handling (Razorpay uses .description, Firebase uses .message)
+    const errorMsg = err.message || (err.error && err.error.description) || err.description || JSON.stringify(err);
+    console.error('[create-order] FATAL ERROR:', errorMsg);
+    console.error('[create-order] FULL ERROR OBJECT:', JSON.stringify(err));
+
     if (err.code === 'auth/id-token-expired') {
       return res.status(401).json({ message: 'Session expired. Please sign in again.' });
     }
-    // ✅ DEBUG: Return actual error message to diagnose backend config
+
     return res.status(500).json({ 
-      message: 'Failed to create order: ' + err.message,
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined 
+      message: 'Failed to create order: ' + errorMsg,
+      code: err.code || (err.error && err.error.code) || 'INTERNAL_ERROR'
     });
   }
 };
