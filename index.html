@@ -4867,7 +4867,14 @@
   function makeChart(id, type, labels, datasets, opts = {}) {
     const ctx = document.getElementById(id); if (!ctx) return null;
     let existing = Chart.getChart(ctx); if (existing) existing.destroy();
-    const cfg = { type, data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: opts.legend !== false ? true : false }, tooltip: { callbacks: {} } }, scales: { x: { ticks: { color: '#5a6478', font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.07)' } }, y: { ticks: { color: '#5a6478', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.07)' } } } } };
+    const cfg = { type, data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, 
+      plugins: { legend: { display: opts.legend !== false ? true : false }, tooltip: { callbacks: {} } }, 
+      scales: { 
+        x: { ticks: { color: '#5a6478', font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.07)' } }, 
+        y: { beginAtZero: true, ticks: { color: '#5a6478', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.07)' } } 
+      },
+      datasets: { bar: { barPercentage: 0.9, categoryPercentage: 0.9 } }
+    } };
     if (opts.indexAxis) cfg.options.indexAxis = opts.indexAxis;
     return new Chart(ctx, cfg);
   }
@@ -5216,9 +5223,6 @@
     const bids = Array.from({ length: 20 }, (_, i) => i < 10 ? Math.max(0.1, (Math.random() * 5 + (10 - i) * 2) * (1 + sigFactor)) : 0);
     const asks = Array.from({ length: 20 }, (_, i) => i >= 10 ? Math.max(0.1, (Math.random() * 5 + (i - 10) * 1.5) * (1 - sigFactor)) : 0);
     
-    console.log("[buildMicro] cPair:", cPair, "baseP:", baseP, "precision:", precision);
-    console.log("[buildMicro] Bids count:", bids.filter(v=>v>0).length, "max bid:", Math.max(...bids));
-
     makeChart('obChart', 'bar', prices, [
       { data: bids, backgroundColor: 'rgba(0,229,160,0.6)', borderRadius: 2, label: 'Bids' },
       { data: asks.map(v => -v), backgroundColor: 'rgba(255,69,96,0.6)', borderRadius: 2, label: 'Asks' },
