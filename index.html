@@ -5211,7 +5211,8 @@
     });
     
     // Bids/Asks skewed by signal
-    const sigFactor = Math.max(-0.5, Math.min(0.5, pd2.sig / 10));
+    const sig = pd2.sig || 0;
+    const sigFactor = Math.max(-0.5, Math.min(0.5, sig / 10));
     const bids = Array.from({ length: 20 }, (_, i) => i < 10 ? Math.max(0.1, (Math.random() * 5 + (10 - i) * 2) * (1 + sigFactor)) : 0);
     const asks = Array.from({ length: 20 }, (_, i) => i >= 10 ? Math.max(0.1, (Math.random() * 5 + (i - 10) * 1.5) * (1 - sigFactor)) : 0);
     
