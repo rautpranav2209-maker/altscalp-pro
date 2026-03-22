@@ -1,0 +1,8 @@
+{
+  "name": "altscalp-pro",
+  "version": "1.0.0",
+  "description": "Vercel Build Trigger Override",
+  "scripts": {
+    "build": "echo 'Triggering custom vercel.json build command'"
+  }
+}
