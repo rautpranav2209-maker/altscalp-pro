@@ -4869,6 +4869,7 @@
   /* ═══════════ CHART HELPER (unchanged) ═══════════ */
   function makeChart(id, type, labels, datasets, opts = {}) {
     const ctx = document.getElementById(id); if (!ctx) return null;
+    let existing = Chart.getChart(ctx); if (existing) existing.destroy();
     const cfg = { type, data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: opts.legend !== false ? true : false }, tooltip: { callbacks: {} } }, scales: { x: { ticks: { color: '#5a6478', font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.07)' } }, y: { ticks: { color: '#5a6478', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' }, border: { color: 'rgba(255,255,255,0.07)' } } } } };
     if (opts.indexAxis) cfg.options.indexAxis = opts.indexAxis;
     return new Chart(ctx, cfg);
@@ -5204,7 +5205,7 @@
 
     const pd2 = PAIRS.find(d => d.p === cPair) || { price: 100, sig: 0 };
     const baseP = pd2.price;
-    const precision = pd(cPair);
+    const precision = baseP < 0.1 ? 6 : baseP < 10 ? 4 : baseP < 1000 ? 2 : 1;
     
     // Generate order book relative to current price
     const prices = Array.from({ length: 20 }, (_, i) => {
