@@ -1,9 +1,8 @@
 {
   "version": 2,
-  "name": "altscalp-pro",
   "framework": null,
-  "buildCommand": "echo 'Skipping build, serving root'",
-  "outputDirectory": ".",
+  "buildCommand": "mkdir -p public && cp -r index.html manifest.json service-worker.js logo.png 404.html public/ 2>/dev/null || true",
+  "outputDirectory": "public",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/manifest.json", "destination": "/manifest.json" },
