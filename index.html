@@ -5215,6 +5215,9 @@
     const bids = Array.from({ length: 20 }, (_, i) => i < 10 ? Math.max(0.1, (Math.random() * 5 + (10 - i) * 2) * (1 + sigFactor)) : 0);
     const asks = Array.from({ length: 20 }, (_, i) => i >= 10 ? Math.max(0.1, (Math.random() * 5 + (i - 10) * 1.5) * (1 - sigFactor)) : 0);
     
+    console.log("[buildMicro] cPair:", cPair, "baseP:", baseP, "precision:", precision);
+    console.log("[buildMicro] Bids count:", bids.filter(v=>v>0).length, "max bid:", Math.max(...bids));
+
     makeChart('obChart', 'bar', prices, [
       { data: bids, backgroundColor: 'rgba(0,229,160,0.6)', borderRadius: 2, label: 'Bids' },
       { data: asks.map(v => -v), backgroundColor: 'rgba(255,69,96,0.6)', borderRadius: 2, label: 'Asks' },
