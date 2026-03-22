@@ -4179,7 +4179,7 @@
 
     // 2. Fallback: Firebase Auth creation time for brand-new signups
     // (userData may not be loaded yet on very first session)
-    if (user.metadata && user.metadata.creationTime) {
+    if (user && user.metadata && user.metadata.creationTime) {
       const creationTime = new Date(user.metadata.creationTime).getTime();
       if (NOW - creationTime < DAY_MS) return true;
     }
