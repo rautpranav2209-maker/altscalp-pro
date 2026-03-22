@@ -2039,24 +2039,37 @@
         padding: 10px 16px
       }
 
+      /* Mobile Nav Tabs Dock */
       .nav-tabs {
-        overflow-x: auto;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(8, 12, 18, 0.85);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 1000;
+        display: flex;
         flex-wrap: nowrap;
-        -webkit-overflow-scrolling: touch
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 5px 8px 15px 8px; /* Pad for iOS home bar */
+        justify-content: flex-start;
       }
-
+      
       .nav-tabs::-webkit-scrollbar {
-        height: 0
+        display: none;
       }
 
-      .pr {
-        grid-template-columns: 6px 70px 30px 50px 38px 40px 44px;
-        font-size: 10px
+      .ntab {
+        flex: 0 0 auto;
+        padding: 10px 14px;
+        font-size: 11px;
       }
 
-      .ph {
-        grid-template-columns: 6px 70px 30px 50px 38px 40px 44px;
-        font-size: 8px
+      .page {
+        padding-bottom: 65px; /* Prevent content hiding behind dock */
       }
 
       /* Premium Modal Mobile Overrides */
@@ -2195,20 +2208,37 @@
     }
 
     .premium-card {
-      background: linear-gradient(165deg, #0f172a, #020617);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: transparent;
       border-radius: 20px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 229, 160, 0.03);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(0, 242, 254, 0.15);
       position: relative;
-      overflow: hidden;
+      /* overflow: hidden; removed to let glow bleed if needed, but inner needs it */
+      z-index: 1;
+    }
+
+    .premium-card::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 22px;
+      background: conic-gradient(from 0deg, transparent 50%, var(--g) 80%, var(--pu) 100%);
+      z-index: -2;
+      animation: spinBorder 4s linear infinite;
     }
 
     .premium-card::after {
       content: '';
       position: absolute;
-      top: -50%; left: -50%; width: 200%; height: 200%;
-      background: radial-gradient(circle at center, rgba(0, 229, 160, 0.03) 0%, transparent 70%);
-      pointer-events: none;
+      inset: 0;
+      border-radius: 20px;
+      background: rgba(10, 14, 22, 0.95);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      z-index: -1;
+    }
+
+    @keyframes spinBorder {
+      100% { transform: rotate(360deg); }
     }
 
     /* Comparison Table */
