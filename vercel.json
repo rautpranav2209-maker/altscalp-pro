@@ -1,8 +1,6 @@
 {
   "version": 2,
   "name": "altscalp-pro",
-  "outputDirectory": "public",
-  "buildCommand": "exit 0",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/manifest.json", "destination": "/manifest.json" },

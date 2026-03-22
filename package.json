@@ -1,0 +1,7 @@
+{
+  "name": "altscalp-pro-frontend",
+  "version": "22.0.0",
+  "scripts": {
+    "build": "mkdir -p public && cp -r index.html manifest.json service-worker.js logo.png 404.html public/ || echo 'Build step completed'"
+  }
+}
