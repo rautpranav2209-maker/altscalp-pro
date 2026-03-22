@@ -28,34 +28,34 @@
   <!-- Razorpay SDK -->
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script><style>
     :root {
-      --bg: #07090e;
-      --s1: #0c1018;
-      --s2: #111820;
-      --s3: #161f2a;
-      --b1: rgba(255, 255, 255, 0.06);
-      --b2: rgba(255, 255, 255, 0.11);
-      --b3: rgba(255, 255, 255, 0.18);
-      --tx: #dce6f5;
-      --tm: #8496b0;
-      --td: #3a4a5e;
-      --g: #00e5a0;
-      --gd: rgba(0, 229, 160, 0.12);
-      --gm: rgba(0, 229, 160, 0.22);
-      --r: #ff4560;
-      --rd: rgba(255, 69, 96, 0.12);
-      --a: #ffb347;
-      --ad: rgba(255, 179, 71, 0.12);
-      --bl: #4fa3ff;
-      --bld: rgba(79, 163, 255, 0.12);
-      --pk: #ff6eb4;
-      --pu: #a78bfa;
-      --mid: #00e5a0;
-      --meme: #ff6eb4;
-      --defi: #a78bfa;
-      --ai: #4fa3ff;
-      --gaming: #ffb347;
-      --l2: #a78bfa;
-      --infra: #ff6eb4;
+      --bg: #030508;
+      --s1: rgba(12, 16, 24, 0.55);
+      --s2: rgba(255, 255, 255, 0.04);
+      --s3: rgba(255, 255, 255, 0.08);
+      --b1: rgba(255, 255, 255, 0.08);
+      --b2: rgba(255, 255, 255, 0.15);
+      --b3: rgba(255, 255, 255, 0.25);
+      --tx: #ffffff;
+      --tm: #a0aec0;
+      --td: #475569;
+      --g: #00f2fe;
+      --gd: rgba(0, 242, 254, 0.15);
+      --gm: rgba(0, 242, 254, 0.3);
+      --r: #ff2a5f;
+      --rd: rgba(255, 42, 95, 0.15);
+      --a: #f59e0b;
+      --ad: rgba(245, 158, 11, 0.15);
+      --bl: #3b82f6;
+      --bld: rgba(59, 130, 246, 0.15);
+      --pk: #ec4899;
+      --pu: #8b5cf6;
+      --mid: #00f2fe;
+      --meme: #ec4899;
+      --defi: #8b5cf6;
+      --ai: #3b82f6;
+      --gaming: #f59e0b;
+      --l2: #8b5cf6;
+      --infra: #ec4899;
       --fn: 'Syne', sans-serif;
       --fm: 'Space Mono', monospace;
     }
@@ -79,9 +79,16 @@
       content: '';
       position: fixed;
       inset: 0;
-      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.025) 2px, rgba(0, 0, 0, 0.025) 4px);
+      background: radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.06), transparent 25%),
+                  radial-gradient(circle at 85% 30%, rgba(0, 242, 254, 0.06), transparent 25%);
       pointer-events: none;
-      z-index: 9999
+      z-index: -1;
+      animation: ambientGlow 15s ease-in-out infinite alternate;
+    }
+
+    @keyframes ambientGlow {
+      0% { opacity: 0.5; transform: scale(1); }
+      100% { opacity: 1; transform: scale(1.1); }
     }
 
     /* NAV */
@@ -94,18 +101,29 @@
       border-bottom: 1px solid var(--b1);
       position: sticky;
       top: 0;
-      z-index: 200
+      z-index: 200;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
     }
 
     .logo {
       font-family: var(--fn);
       font-weight: 800;
       font-size: 18px;
-      letter-spacing: -.5px
+      letter-spacing: -.5px;
+      background: linear-gradient(90deg, #ffffff, #a0aec0);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
 
     .logo span {
-      color: var(--g)
+      background: linear-gradient(90deg, var(--g), var(--pu));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
     }
 
     .nav-tabs {
@@ -255,8 +273,11 @@
     .card {
       background: var(--s1);
       border: 1px solid var(--b1);
-      border-radius: 6px;
-      padding: 16px 18px
+      border-radius: 8px;
+      padding: 16px 18px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
     }
 
     .card-title {
@@ -290,8 +311,16 @@
     /* STAT CELLS */
     .stat {
       background: var(--s2);
-      border-radius: 4px;
-      padding: 10px 14px
+      border-radius: 6px;
+      padding: 10px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    
+    .stat:hover {
+      transform: translateY(-2px);
+      background: var(--s3);
+      border-color: rgba(255, 255, 255, 0.1);
     }
 
     .stat-l {
@@ -305,7 +334,9 @@
     .stat-v {
       font-family: var(--fn);
       font-size: 20px;
-      font-weight: 700
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      text-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
     }
 
     /* WATCHLIST STAR */
@@ -1429,25 +1460,29 @@
 
     .of-submit {
       width: 100%;
-      padding: 9px;
-      border: none;
-      border-radius: 4px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
       font-size: 13px;
       font-weight: 800;
       font-family: var(--fn);
       cursor: pointer;
-      letter-spacing: .06em;
+      letter-spacing: 1px;
       text-transform: uppercase;
-      transition: all .15s;
-      margin-top: 3px
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      margin-top: 5px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
 
     .of-submit:hover {
-      filter: brightness(1.12)
+      transform: translateY(-2px);
+      filter: brightness(1.2);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
     }
 
     .of-submit:active {
-      transform: scale(.98)
+      transform: scale(0.98);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     }
 
     .lev-preset {
