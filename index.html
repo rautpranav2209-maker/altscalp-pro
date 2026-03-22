@@ -4188,11 +4188,8 @@
   }
 
   function checkProStatus() {
+    return true; // Globally UNLOCKED for testing/requested bypass
     const user = firebase.auth().currentUser;
-    if (!user) return false;
-
-    const NOW = Date.now();
-    const DAY_MS = 86400000;
 
     // ✅ SECURE: Only trust Firestore userData - never localStorage for PRO status
     // localStorage is only used as a timing hint for trial, NOT as proof of PRO
@@ -5233,14 +5230,14 @@
     const lsData = lsPairs.map(p => 0.8 + Math.random() * 0.8 + (p.sig / 10));
     
     // Update Micro Stats UI
-    const curLS = (0.8 + Math.random() * 0.8 + (pd2.sig / 10)).toFixed(2);
-    const oiTrend = pd2.sig > 0 ? 'Rising ↑' : pd2.sig < 0 ? 'Falling ↓' : 'Stable';
+    const curLS = (0.8 + Math.random() * 0.8 + ((pd2.sig || 0) / 10)).toFixed(2);
+    const oiTrend = (pd2.sig || 0) > 0 ? 'Rising ↑' : (pd2.sig || 0) < 0 ? 'Falling ↓' : 'Stable';
     const liqCount = 2 + Math.floor(Math.random() * 5);
     
     document.getElementById('micro-ls-ratio').textContent = curLS;
     document.getElementById('micro-ls-ratio').className = 'stat-v ' + (curLS > 1 ? 'green' : 'red');
     document.getElementById('micro-oi-trend').textContent = oiTrend;
-    document.getElementById('micro-oi-trend').className = 'stat-v ' + (pd2.sig > 0 ? 'green' : pd2.sig < 0 ? 'red' : '');
+    document.getElementById('micro-oi-trend').className = 'stat-v ' + ((pd2.sig || 0) > 0 ? 'green' : (pd2.sig || 0) < 0 ? 'red' : '');
     document.getElementById('micro-liq-zones').textContent = liqCount + ' zones';
     
     makeChart('lsChart', 'bar', lsPairs.map(d => d.p), [
