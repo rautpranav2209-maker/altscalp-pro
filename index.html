@@ -4161,7 +4161,6 @@
   }
 
   function checkProStatus() {
-    return true; // Globally UNLOCKED for testing/requested bypass
     const user = firebase.auth().currentUser;
 
     // ✅ SECURE: Only trust Firestore userData - never localStorage for PRO status
