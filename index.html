@@ -4051,8 +4051,14 @@
   async function handleProPayClick() {
     const user = firebase.auth().currentUser;
     if (!user) {
+      closeProModal(); // ✅ UX FIX: Close subscription modal so login is in front
       showToast('Please sign in to upgrade', 'error');
       openAuthModal();
+      return;
+    }
+
+    if (selectedPlan === 'yearly') {
+      window.location.href = 'https://rzp.io/rzp/iVRbtbFZ';
       return;
     }
 
