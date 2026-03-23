@@ -32,10 +32,15 @@ module.exports = async (req, res) => {
 
   const expectedSig = crypto
     .createHmac('sha256', webhookSecret)
-    .update(rawBody)
+    .update(JSON.stringify(req.body))
     .digest('hex');
 
-  if (expectedSig !== signature) {
+  // ✅ SECURITY: Use timing-safe comparison to prevent timing attacks
+  const signatureBuffer = Buffer.from(signature, 'utf8');
+  const expectedSigBuffer = Buffer.from(expectedSig, 'utf8');
+  
+  if (signatureBuffer.length !== expectedSigBuffer.length || 
+      !crypto.timingSafeEqual(signatureBuffer, expectedSigBuffer)) {
     console.error('[webhook] INVALID SIGNATURE — possible fake request');
     return res.status(400).json({ status: 'invalid_signature' });
   }
