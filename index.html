@@ -4414,9 +4414,9 @@
 
   // Rename the original static PAIRS to STATIC_PAIRS (fallback)
   const STATIC_PAIRS = [
-    { p: 'SOL', cat: 'mid', net: 'sol', ex: 'binance,bybit,gate', price: 148.2, chg: 0.62, ob: 0.70, rsi: 71, vd: 0.80, fr: 0.030, sp: 3.0, sent: 0.70, liq: 0.85, vol: 120, corr: 0.82 },
-    { p: 'AVAX', cat: 'mid', net: 'avax', ex: 'binance,bybit,gate', price: 38.4, chg: -0.18, ob: -0.20, rsi: 46, vd: -0.25, fr: -0.010, sp: 3.5, sent: 0.10, liq: 0.75, vol: 130, corr: 0.76 },
-    { p: 'DOT', cat: 'mid', net: 'eth', ex: 'binance,bybit,gate', price: 8.72, chg: 0.30, ob: 0.25, rsi: 58, vd: 0.35, fr: 0.015, sp: 4.0, sent: 0.25, liq: 0.70, vol: 125, corr: 0.74 },
+    { p: 'SOL', cat: 'mid', net: 'sol', ex: 'binance,bybit,gate', price: 148.2, chg: 0.0, ob: 0.0, rsi: 50, vd: 0.0, fr: 0.010, sp: 3.0, sent: 0.10, liq: 0.85, vol: 150, corr: 0.82 },
+    { p: 'AVAX', cat: 'mid', net: 'avax', ex: 'binance,bybit,gate', price: 38.4, chg: 0.0, ob: 0.0, rsi: 50, vd: 0.0, fr: 0.010, sp: 3.5, sent: 0.10, liq: 0.75, vol: 130, corr: 0.76 },
+    { p: 'DOT', cat: 'mid', net: 'eth', ex: 'binance,bybit,gate', price: 8.72, chg: 0.0, ob: 0.0, rsi: 50, vd: 0.0, fr: 0.010, sp: 4.0, sent: 0.10, liq: 0.70, vol: 125, corr: 0.74 },
     { p: 'MATIC', cat: 'mid', net: 'eth', ex: 'binance,bybit,gate', price: 0.892, chg: -0.45, ob: -0.50, rsi: 37, vd: -0.60, fr: -0.020, sp: 4.5, sent: -0.10, liq: 0.72, vol: 140, corr: 0.71 },
     { p: 'LINK', cat: 'mid', net: 'eth', ex: 'binance,bybit,gate', price: 14.8, chg: 0.55, ob: 0.60, rsi: 67, vd: 0.65, fr: 0.025, sp: 3.0, sent: 0.50, liq: 0.68, vol: 135, corr: 0.69 },
     { p: 'NEAR', cat: 'mid', net: 'eth', ex: 'binance,bybit,gate', price: 7.22, chg: 0.41, ob: 0.30, rsi: 61, vd: 0.35, fr: 0.014, sp: 4.2, sent: 0.35, liq: 0.73, vol: 140, corr: 0.70 },
@@ -4509,22 +4509,20 @@
       const data = await response.json();
 
       if (data.pairs) {
-        // Map live prices to our static list
-        data.pairs.forEach(p => {
-          const sym = p.baseToken.symbol.toUpperCase();
-          const existing = liveList.find(x => x.p === sym);
-          if (existing) {
-            existing.price = parseFloat(p.priceUsd);
-            existing.chg = p.priceChange?.h24 || existing.chg;
-            existing.vol = p.volume?.h24 || existing.vol;
-          }
+        // ✅ BUG FIX: Update ALL active pairs, not just static ones
+        PAIRS = PAIRS.map(existing => {
+          const live = data.pairs.find(p => p.baseToken.symbol.toUpperCase() === existing.p);
+          if (live) return parseDexScreenerPair(live);
+          return existing;
         });
+        // Also ensure activePair is always fresh
+        const liveActive = data.pairs.find(p => p.baseToken.symbol.toUpperCase() === activePair);
+        if (liveActive) selPair(activePair); 
       }
 
-      PAIRS = liveList;
       dsRetryCount = 0;
       buildScanner(); buildCorrBars(); buildMTFTable();
-      if (!PAIRS.some(p => p.p === activePair)) { activePair = PAIRS[0]?.p || 'BTC'; loadPair(activePair); }
+      if (!PAIRS.some(p => p.p === activePair)) { activePair = PAIRS[0]?.p || 'BTC'; selPair(activePair); }
       showToast(`✓ Loaded live market data`, 'success');
     } catch (error) {
       dsRetryCount++;
@@ -4539,15 +4537,28 @@
     const cat = p.chainId || 'ethereum';
     const vol24h = p.volume?.h24 || 0;
     const liqUsd = p.liquidity?.usd || 0;
-    const chg = p.priceChange?.h24 || 0;
+    
+    // ✅ MOMENTUM FIX: Weigh short-term (m5, h1) higher than long-term (h24)
+    const chg24 = p.priceChange?.h24 || 0;
+    const chg1h = p.priceChange?.h1 || 0;
+    const chg5m = p.priceChange?.m5 || 0;
+    
+    // ✅ MOMENTUM HARDENING: 
+    // 1. Extreme weight on 5m (70%) to catch crashes instantly
+    const effectiveChg = (chg5m * 0.7) + (chg1h * 0.2) + (chg24 * 0.1);
 
     const volScore = Math.min(400, vol24h / 50000);
-    const rsi = Math.max(10, Math.min(90, 50 + chg * 0.5 + (Math.random() - 0.5) * 10));
-    const ob = Math.max(-1, Math.min(1, chg * 0.05 + (Math.random() - 0.5) * 0.3));
-    const vd = Math.max(-1, Math.min(1, (p.volume?.h1 || 0) / 100000 + (Math.random() - 0.5) * 0.2));
-    const fr = Math.max(-0.05, Math.min(0.05, chg * 0.001 + (Math.random() - 0.5) * 0.01));
+    // 2. Regime Filter: If m5 is crashing (>1% drop), RSI and OB must reflect it
+    let rsi = Math.max(10, Math.min(90, 50 + effectiveChg * 2.0));
+    if (chg5m < -1 && rsi > 45) rsi = 45; // Force bearish regime on local crash
+    
+    let ob = Math.max(-1, Math.min(1, effectiveChg * 0.2));
+    if (chg5m < -1 && ob > -0.2) ob = -0.2; // Force sell pressure on local crash
+
+    const vd = Math.max(-1, Math.min(1, chg5m * 0.12));
+    const fr = Math.max(-0.05, Math.min(0.05, chg24 * 0.001));
     const sp = liqUsd > 1000000 ? 3 + Math.random() * 2 : liqUsd > 100000 ? 5 + Math.random() * 4 : 10 + Math.random() * 10;
-    const sent = Math.max(-1, Math.min(1, chg * 0.05 + (Math.random() - 0.5) * 0.3));
+    const sent = Math.max(-1, Math.min(1, effectiveChg * 0.15));
     const liqScore = liqUsd > 5000000 ? 0.85 : liqUsd > 500000 ? 0.7 : liqUsd > 50000 ? 0.55 : 0.3;
 
     return {
@@ -4558,7 +4569,9 @@
       pairAddress: p.pairAddress,
       ex: p.dexId,
       price: parseFloat(p.priceUsd) || 0,
-      chg: +chg.toFixed(2),
+      chg: +chg24.toFixed(2), // Keep 24h for UI display
+      mom: +effectiveChg.toFixed(2), // ✅ MOMENTUM FIX: The actual driver for Signal Math
+      m5chg: +chg5m.toFixed(2), 
       ob: +ob.toFixed(2),
       rsi: Math.round(rsi),
       vd: +vd.toFixed(2),
@@ -4577,7 +4590,17 @@
   function vpen(v) { return v > 280 ? .45 : v > 200 ? .60 : v > 150 ? .75 : v > 100 ? .88 : 1.0 }
   function lpen(l) { return l < 0.4 ? .55 : l < 0.55 ? .70 : l < 0.70 ? .85 : 1.0 }
   function spen(sp) { return sp > 10 ? -2 : sp > 7 ? -1.2 : sp > 5 ? -.6 : sp > 3 ? -.2 : 0 }
-  function calcSig(d) { const r = d.chg * 1.9 + d.ob * 1.5 + (d.rsi - 50) * 0.038 + d.vd * 1.3 + d.fr * 18 + d.sent * 0.9 + spen(d.sp); return +(r * vpen(d.vol) * lpen(d.liq)).toFixed(3) }
+  function calcSig(d) { 
+    // ✅ MOMENTUM FIX: Use weighted momentum (mom) if available, otherwise fallback to 24h change
+    const mom = d.mom !== undefined ? d.mom : d.chg;
+    
+    // 3. Signal Guard: If m5 momentum is negative, suppress 'STRONG LONG'
+    let r = mom * 1.9 + d.ob * 1.5 + (d.rsi - 50) * 0.038 + d.vd * 1.3 + d.fr * 18 + d.sent * 0.9 + spen(d.sp); 
+    if (d.m5chg < -0.5 && r > 0.5) r = 0.5; // Cap at 'WAIT' during local crash
+    if (d.m5chg > 0.5 && r < -0.5) r = -0.5; // Cap at 'WAIT' during local pump
+
+    return +(r * vpen(d.vol) * lpen(d.liq)).toFixed(3) 
+  }
   function sigColor(s) { return s >= 0 ? '#00e5a0' : '#ff4560' }
   function sigBt(s) { return s > 2 ? 'STRONG LONG' : s > 0.5 ? 'LONG' : s < -2 ? 'STRONG SHORT' : s < -0.5 ? 'SHORT' : 'WAIT' }
   function fpLegacy(p) { return p < 0.0001 ? p.toFixed(7) : p < 0.01 ? p.toFixed(5) : p < 1 ? p.toFixed(4) : p < 100 ? p.toFixed(2) : p.toLocaleString() }
