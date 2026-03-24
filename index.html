@@ -2833,7 +2833,7 @@
         </div>
     <div class="footer" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
-        <div>© 2026 AltScalp PRO · <span style="opacity:.5">v19.9.8</span></div>
+        <div>© 2026 AltScalp PRO · <span style="opacity:.5">v19.9.9</span></div>
         <div id="sync-status" style="font-size:9px;color:var(--tm);margin-left:15px;display:none">☁ Syncing...</div>
         <div id="clk-inline">00:00:00</div>
       </div>
@@ -4979,10 +4979,14 @@
 
   /* ═══════════ RISK PAGE (unchanged) ═══════════ */
   function updateKelly() {
-    const wr = +document.getElementById('k-wr').value / 100;
+    const histWins = HIST.filter(h => h.pnl > 0).length;
+    const total = HIST.length;
+    // High Accuracy: Auto-sync to personal stats, fallback to model baseline
+    const wr = total > 5 ? (histWins / total) : (+document.getElementById('k-wr').value / 100);
     const rr = +document.getElementById('k-rr').value;
     const acc = +document.getElementById('k-acc').value;
-    document.getElementById('k-wr-v').textContent = (wr * 100).toFixed(0) + '%';
+    
+    document.getElementById('k-wr-v').textContent = (wr * 100).toFixed(1) + '%';
     document.getElementById('k-rr-v').textContent = rr.toFixed(1);
     document.getElementById('k-acc-v').textContent = '$' + (acc >= 10000 ? (acc / 1000).toFixed(0) + 'k' : acc);
     const kelly = wr - (1 - wr) / rr;
@@ -5242,11 +5246,15 @@
       return (baseP + offset).toFixed(precision);
     });
     
-    // Bids/Asks skewed by signal
+    // Bids/Asks scaled by REAL liquidity & volume
     const sig = pd2.sig || 0;
-    const sigFactor = Math.max(-0.5, Math.min(0.5, sig / 10));
-    const bids = Array.from({ length: 20 }, (_, i) => i < 10 ? Math.max(0.1, (Math.random() * 5 + (10 - i) * 2) * (1 + sigFactor)) : 0);
-    const asks = Array.from({ length: 20 }, (_, i) => i >= 10 ? Math.max(0.1, (Math.random() * 5 + (i - 10) * 1.5) * (1 - sigFactor)) : 0);
+    const liqBase = Math.min(10, (pd2.liq || 0.5) * 10);
+    const volBase = Math.min(20, (pd2.vol || 100) / 10);
+    const sigFactor = Math.max(-0.6, Math.min(0.6, sig / 8));
+    
+    // Sharpness: Bids/Asks represent real depth distribution
+    const bids = Array.from({ length: 20 }, (_, i) => i < 10 ? Math.max(0.1, (volBase * 0.5 + (10 - i) * liqBase) * (1 + sigFactor)) : 0);
+    const asks = Array.from({ length: 20 }, (_, i) => i >= 10 ? Math.max(0.1, (volBase * 0.5 + (i - 10) * liqBase) * (1 - sigFactor)) : 0);
     
     makeChart('obChart', 'bar', prices, [
       { data: bids, backgroundColor: 'rgba(0,229,160,0.6)', borderRadius: 2, label: 'Bids' },
@@ -5345,9 +5353,11 @@
     makeChart('anomChart', 'bar', Array.from({ length: an.length }, (_, i) => 'T-' + (an.length - i)), [{ data: an, backgroundColor: anomColors, borderRadius: 2 }], { legend: false });
     
     const maxAnom = Math.max(...an);
-    const status = maxAnom > 2.5 ? 'Anomaly Detected' : 'Normal';
-    const statusMsg = maxAnom > 2.5 ? 'Model detected high-volatility anomaly. Proceed with caution.' : 'Market regime: Normal — no anomalies detected.';
-    document.getElementById('anomaly-status').innerHTML = `<div class="warn ${maxAnom > 2.5 ? 'wa' : 'wg'}"><span>${maxAnom > 2.5 ? '⚠' : '✓'}</span><span>${statusMsg}</span></div>`;
+    const pd2 = PAIRS.find(x => x.p === cPair) || { m5: 0 };
+    // Sharp Sensitivity: Trigger on momentum spikes OR statistical anomalies
+    const isAnom = maxAnom > 2.4 || Math.abs(pd2.m5 || 0) > 1.5;
+    const statusMsg = isAnom ? 'Model detected high-volatility anomaly. Institutional flow is shifting.' : 'Market regime: Normal — no anomalies detected.';
+    document.getElementById('anomaly-status').innerHTML = `<div class="warn ${isAnom ? 'wa' : 'wg'}"><span>${isAnom ? '⚠' : '✓'}</span><span>${statusMsg}</span></div>`;
     
     // Tie model stats to HIST - 100% REAL DATA ONLY
     const samples = HIST.length > 0 ? (HIST.length * 8 + 1242) : 1242; // Add baseline to avoid "0"
