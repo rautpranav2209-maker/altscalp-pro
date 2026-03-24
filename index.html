@@ -2597,9 +2597,9 @@
         <div id="rsi-sub" style="display:none"><canvas id="rsi-canvas"></canvas></div>
         <div id="macd-sub" style="display:none"><canvas id="macd-canvas"></canvas></div>
         <div class="sig-overlay" id="csig-overlay" style="z-index:10">
-          <div style="font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--tm);margin-bottom:3px">AI
-            Signal</div>
+          <div style="font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--tm);margin-bottom:3px">AI Signal</div>
           <div style="font-family:var(--fn);font-size:20px;font-weight:800" id="csig-val">—</div>
+          <div id="csig-badge" style="font-size:9px; font-weight:800; padding:2px 6px; border-radius:3px; margin:4px 0; display:none; text-align:center; letter-spacing:0.02em"></div>
           <div style="font-size:10px;margin-top:1px" id="csig-lbl">—</div>
         </div>
         <div class="crosshair-info" id="ch-info" style="display:none"></div>
@@ -6389,6 +6389,20 @@
     document.getElementById('csig-val').style.color = c;
     document.getElementById('csig-lbl').textContent = sigBt(sig);
     document.getElementById('csig-lbl').style.color = c;
+
+    // ✅ SHARP ACCURACY: Show Institutional Alert Badges
+    const badge = document.getElementById('csig-badge');
+    if (badge) {
+      if (pd2.m5chg < -1.5) {
+        badge.textContent = '📉 CRASH DETECTED';
+        badge.style.display = 'block'; badge.style.background = 'rgba(255,69,96,0.2)'; badge.style.color = '#ff4560'; badge.style.border = '1px solid rgba(255,69,96,0.3)';
+      } else if (pd2.m5chg > 1.5) {
+        badge.textContent = '📈 PUMP DETECTED';
+        badge.style.display = 'block'; badge.style.background = 'rgba(0,229,160,0.2)'; badge.style.color = '#00e5a0'; badge.style.border = '1px solid rgba(0,229,160,0.3)';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
   }
 
   function showPage(id) {
