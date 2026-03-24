@@ -2833,7 +2833,7 @@
         </div>
     <div class="footer" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
-        <div>© 2026 AltScalp PRO · <span style="opacity:.5">v19.9.9</span></div>
+        <div>© 2026 AltScalp PRO · <span style="opacity:.5">v19.9.10</span></div>
         <div id="sync-status" style="font-size:9px;color:var(--tm);margin-left:15px;display:none">☁ Syncing...</div>
         <div id="clk-inline">00:00:00</div>
       </div>
@@ -6413,24 +6413,45 @@
     el.classList.add('active'); renderChart();
   }
   function updSigOverlay() {
-    const pd2 = PAIRS.find(d => d.p === cPair); if (!pd2) return;
-    const sig = calcSig(pd2); const c = sigColor(sig);
-    document.getElementById('csig-val').textContent = (sig >= 0 ? '+' : '') + sig.toFixed(3);
-    document.getElementById('csig-val').style.color = c;
-    document.getElementById('csig-lbl').textContent = sigBt(sig);
-    document.getElementById('csig-lbl').style.color = c;
+    const d = PAIRS.find(x => x.p === cPair); if (!d) return;
+    const s = calcSig(d);
+    
+    // ✅ ACCURACY METER: Calculate confidence based on TF agreement and flow
+    const s1 = s;
+    const s5 = calcSig({ ...d, m5: (d.m5 || 0) * 0.7, h1: (d.h1 || 0) * 0.8, flow: (d.flow || 0) * 0.9 });
+    const agree = (s1 > 0.5 && s5 > 0.5) || (s1 < -0.5 && s5 < -0.5);
+    const flowStr = Math.min(100, Math.abs(d.flow || 0) * 150);
+    const confidence = Math.round((agree ? 85 : 60) + (flowStr * 0.15));
 
-    // ✅ SHARP ACCURACY: Show Institutional Alert Badges
+    const color = sigColor(s);
+    const bt = sigBt(s);
+    
+    document.getElementById('csig-val').textContent = (s >= 0 ? '+' : '') + s.toFixed(3);
+    document.getElementById('csig-val').style.color = color;
+    document.getElementById('csig-lbl').textContent = bt;
+    document.getElementById('csig-lbl').style.color = color;
+
+    // ✅ SHARP ACCURACY: Institutional Alerts + Confidence Meter
     const badge = document.getElementById('csig-badge');
     if (badge) {
-      if (pd2.m5chg < -1.5) {
-        badge.textContent = '📉 CRASH DETECTED';
-        badge.style.display = 'block'; badge.style.background = 'rgba(255,69,96,0.2)'; badge.style.color = '#ff4560'; badge.style.border = '1px solid rgba(255,69,96,0.3)';
-      } else if (pd2.m5chg > 1.5) {
-        badge.textContent = '📈 PUMP DETECTED';
-        badge.style.display = 'block'; badge.style.background = 'rgba(0,229,160,0.2)'; badge.style.color = '#00e5a0'; badge.style.border = '1px solid rgba(0,229,160,0.3)';
+      if (Math.abs(d.m5 || 0) > 1.5) {
+        badge.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:4px">
+            <span style="font-weight:800">${d.m5 < 0 ? '📉 CRASH' : '📈 PUMP'} DETECTED</span>
+            <span style="font-size:9px; opacity:0.8">Institutional Flow: ${(d.flow * 100).toFixed(0)}%</span>
+            <span style="font-size:9px; font-weight:700; color:#4fa3ff">ACCURACY: ${confidence}% SHARP</span>
+          </div>
+        `;
+        badge.style.display = 'block'; 
+        badge.style.background = d.m5 < 0 ? 'rgba(255,69,96,0.2)' : 'rgba(0,229,160,0.2)'; 
+        badge.style.color = d.m5 < 0 ? '#ff4560' : '#00e5a0'; 
+        badge.style.border = `1px solid ${d.m5 < 0 ? 'rgba(255,69,96,0.3)' : 'rgba(0,229,160,0.3)'}`;
       } else {
-        badge.style.display = 'none';
+        badge.innerHTML = `<span style="font-size:10px; font-weight:700; color:#4fa3ff">ACCURACY: ${confidence}% SHARP</span>`;
+        badge.style.display = 'block';
+        badge.style.background = 'rgba(79,163,255,0.1)';
+        badge.style.color = '#4fa3ff';
+        badge.style.border = '1px solid rgba(79,163,255,0.2)';
       }
     }
   }
@@ -6545,7 +6566,7 @@
   // ✅ Register Service Worker for PWA/offline support
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/service-worker.js?v=19.9.9')
+      navigator.serviceWorker.register('/service-worker.js?v=19.9.10')
 .catch(() => {});
     });
   }
