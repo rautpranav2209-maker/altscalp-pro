@@ -2833,7 +2833,7 @@
         </div>
     <div class="footer" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
-        <div>© 2026 AltScalp PRO · <span style="opacity:.5">v19.9.6</span></div>
+        <div>© 2026 AltScalp PRO · <span style="opacity:.5">v19.9.8</span></div>
         <div id="sync-status" style="font-size:9px;color:var(--tm);margin-left:15px;display:none">☁ Syncing...</div>
         <div id="clk-inline">00:00:00</div>
       </div>
@@ -4561,6 +4561,10 @@
     const sent = Math.max(-1, Math.min(1, effectiveChg * 0.15));
     const liqScore = liqUsd > 5000000 ? 0.85 : liqUsd > 500000 ? 0.7 : liqUsd > 50000 ? 0.55 : 0.3;
 
+    const buys = p.txns?.m5?.buys || 0;
+    const sells = p.txns?.m5?.sells || 0;
+    const flow = (buys + sells > 5) ? (buys - sells) / (buys + sells) : 0;
+
     return {
       p: sym,
       cat,
@@ -4569,10 +4573,11 @@
       pairAddress: p.pairAddress,
       ex: p.dexId,
       price: parseFloat(p.priceUsd) || 0,
-      chg: +chg24.toFixed(2), // 24h for UI
+      chg: +chg24.toFixed(2), 
       m5: +chg5m.toFixed(2),
       h1: +chg1h.toFixed(2),
       h24: +chg24.toFixed(2),
+      flow: +flow.toFixed(2), // ✅ WORLD ACCURACY: Buy/Sell Txn flow
       ob: +ob.toFixed(2),
       rsi: Math.round(rsi),
       vd: +vd.toFixed(2),
@@ -4592,26 +4597,27 @@
   function lpen(l) { return l < 0.4 ? .55 : l < 0.55 ? .70 : l < 0.70 ? .85 : 1.0 }
   function spen(sp) { return sp > 10 ? -2 : sp > 7 ? -1.2 : sp > 5 ? -.6 : sp > 3 ? -.2 : 0 }
   function calcSig(d) { 
-    // ✅ SHARP 1m/5m ENGINE: Dynamic Momentum based on curTF
+    // ✅ WORLD-GRADE SHARP ENGINE: Dynamic Momentum + Institutional Flow
     let mom = 0;
     const m5 = d.m5 !== undefined ? d.m5 : (d.chg || 0);
     const h1 = d.h1 !== undefined ? d.h1 : (d.chg || 0);
     const h24 = d.h24 !== undefined ? d.h24 : (d.chg || 0);
+    const flow = d.flow || 0;
 
     if (curTF === '1m') {
-      // 1m Scalp: Extreme focus on 5m momentum (85%)
-      mom = (m5 * 0.85) + (h1 * 0.15);
+      // 1m Scalp: 75% 5m momentum + 25% Flow imbalance
+      mom = (m5 * 0.75) + (flow * 2.5);
     } else {
-      // 5m Scalp: Balanced momentum (60% 5m, 30% 1h, 10% 24h)
-      mom = (m5 * 0.60) + (h1 * 0.30) + (h24 * 0.10);
+      // 5m Scalp: 50% 5m mom + 30% h1 + 20% Flow
+      mom = (m5 * 0.50) + (h1 * 0.30) + (flow * 2.0);
     }
     
-    // Signal Guard: If 5m momentum is negative, suppress 'STRONG LONG'
-    let r = mom * 2.1 + d.ob * 1.5 + (d.rsi - 50) * 0.04 + d.vd * 1.3 + d.fr * 18 + d.sent * 1.0 + spen(d.sp); 
+    // Weighted Institutional Signal Components
+    let r = mom * 2.2 + d.ob * 1.5 + (d.rsi - 50) * 0.045 + d.vd * 1.4 + d.fr * 20 + d.sent * 1.2 + spen(d.sp); 
     
-    // Crash/Pump Prevention logic
-    if (m5 < -0.8 && r > 0.4) r = 0.4; // Force 'WAIT' or 'SHORT' during crash
-    if (m5 > 0.8 && r < -0.4) r = -0.4; // Force 'WAIT' or 'LONG' during pump
+    // ✅ CRASH PREVENTION: Hard-cap if flow or momentum is extremely negative
+    if (m5 < -1.0 || flow < -0.5) { if (r > 0.3) r = 0.3; } // Force 'WAIT' or 'SHORT'
+    if (m5 > 1.0 || flow > 0.5) { if (r < -0.3) r = -0.3; } // Force 'WAIT' or 'LONG'
 
     return +(r * vpen(d.vol) * lpen(d.liq)).toFixed(3) 
   }
