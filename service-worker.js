@@ -1,7 +1,7 @@
-const CACHE_NAME = 'altscalp-v19.9.11';
+const CACHE_NAME = 'altscalp-v19.9.13';
 const ASSETS = [
   '/',
-  '/index.html?v=19.9.11',
+  '/index.html?v=19.9.13',
   '/manifest.json'
 ];
 

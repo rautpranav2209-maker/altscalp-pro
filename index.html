@@ -2833,7 +2833,7 @@
         </div>
     <div class="footer" style="display:none">
       <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
-        <div>© 2026 AltScalp PRO · <span style="opacity:.5">v19.9.11</span></div>
+        <div>© 2026 AltScalp PRO · <span style="opacity:.5">v19.9.13-FINAL</span></div>
         <div id="sync-status" style="font-size:9px;color:var(--tm);margin-left:15px;display:none">☁ Syncing...</div>
         <div id="clk-inline">00:00:00</div>
       </div>
@@ -5444,6 +5444,12 @@
     if (n >= 0.000001) return n.toFixed(8);
     return n.toExponential(4);
   }
+  // ✅ NEW: Format Raw Price for inputs (no currency/K/M suffixes)
+  function frp(v, pair) {
+    const n = +v; if (isNaN(n)) return '';
+    const p = pd(pair);
+    return n.toFixed(p);
+  }
   function fq(v) { return v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(1) + 'K' : (+v).toFixed(0) }
 
   let cPair = 'SOL', cTF = '1m', cType = 'candle', cBuilt = false;
@@ -5649,7 +5655,7 @@
     document.getElementById('of-pair-lbl').textContent = pair + '/USDT';
     document.getElementById('ov-pair').textContent = pair + '/USDT';
     const pd2 = PAIRS.find(d => d.p === pair);
-    if (pd2) { document.getElementById('of-price').value = fpc(pd2.price, pair); updateOFCalc(); }
+    if (pd2) { document.getElementById('of-price').value = frp(pd2.price, pair); updateOFCalc(); }
     // Update cData for the order panel tick logic
     cData = genC(pair, cTF);
     updSigOverlay();
@@ -5792,17 +5798,16 @@
     const tpIn = document.getElementById('of-tp');
     const slIn = document.getElementById('of-sl');
     
-    // Sanitize: removal of non-numeric chars but allow decimal point
-    const cleanTP = (tpIn.value || '').replace(/[^0-9.]/g, '');
-    const cleanSL = (slIn.value || '').replace(/[^0-9.]/g, '');
-    
-    const tp = parseFloat(cleanTP) || null;
-    const sl = parseFloat(cleanSL) || null;
+    // ✅ Fixed: Ensure inputs preserve full scale (don't format with fpc for calculation)
+    const tp = parseFloat((tpIn.value || '').replace(/[^0-9.]/g, '')) || null;
+    const sl = parseFloat((slIn.value || '').replace(/[^0-9.]/g, '')) || null;
     const isMkt = type === 'market';
     const ord = {
       id: OID++, pair: cPair, side: OSIDE, type, price, entry: isMkt ? mktP : price, qty, tp, sl,
-      status: isMkt ? 'filled' : 'open', time: Date.now(), tpHit: false, slHit: false,
-      sig: PAIRS.find(x => x.p === cPair)?.sig || 0 // Store signal for history
+      status: isMkt ? 'filled' : 'open', time: Date.now(), 
+      filledAt: isMkt ? Date.now() : null, // Track when it was actually filled
+      tpHit: false, slHit: false,
+      sig: PAIRS.find(x => x.p === cPair)?.sig || 0
     };
     ORDERS.push(ord);
     if (isMkt) AVAIL -= qty;
@@ -5963,11 +5968,28 @@
       pd2.price = last.c;
       ORDERS.filter(o => o.pair === cPair && o.status === 'open').forEach(o => {
         const fill = (o.side === 'long' && last.c <= o.price) || (o.side === 'short' && last.c >= o.price);
-        if (fill) { o.status = 'filled'; o.entry = last.c; AVAIL -= o.qty; saveState(); }
+        if (fill) { 
+          o.status = 'filled'; 
+          o.entry = last.c; 
+          o.filledAt = Date.now(); // Start cooldown timer
+          AVAIL -= o.qty; 
+          saveState(); 
+          showToast(`Order filled: ${o.pair} ${o.side.toUpperCase()} at ${fpc(o.entry, o.pair)}`, 'success', 2000);
+        }
       });
+      const now = Date.now();
       ORDERS.filter(o => o.pair === cPair && o.status === 'filled').forEach(o => {
-        if (o.tp && !o.tpHit) { const h = o.side === 'long' ? last.c >= o.tp : last.c <= o.tp; if (h) { o.tpHit = true; setTimeout(() => closeOrd(o.id, 'TP Hit'), 0) } }
-        if (o.sl && !o.slHit) { const h = o.side === 'long' ? last.c <= o.sl : last.c >= o.sl; if (h) { o.slHit = true; setTimeout(() => closeOrd(o.id, 'SL Hit'), 0) } }
+        // ✅ Execution Cooldown: Prevent instant close within 1.5s of fill to handle price jitter
+        if (o.filledAt && (now - o.filledAt < 1500)) return;
+
+        if (o.tp && !o.tpHit) { 
+          const h = o.side === 'long' ? last.c >= o.tp : last.c <= o.tp; 
+          if (h) { o.tpHit = true; setTimeout(() => closeOrd(o.id, 'TP Hit'), 0) } 
+        }
+        if (o.sl && !o.slHit) { 
+          const h = o.side === 'long' ? last.c <= o.sl : last.c >= o.sl; 
+          if (h) { o.slHit = true; setTimeout(() => closeOrd(o.id, 'SL Hit'), 0) } 
+        }
       });
       renderOrders(); updCapDisplay(); renderChart();
       updateScannerPrices(); // optimized: only update prices, not full DOM rebuild
@@ -6365,16 +6387,22 @@
   function onClick(e) {
     if (dragging) return;
     const price = getPY(e.clientY);
+    
+    // ✅ Ghost Prevention: Only update inputs if the Order Panel is somewhat active or if SHIFT/CTRL is held
+    const ofPanel = document.querySelector('.order-panel');
+    const isModifier = e.shiftKey || e.ctrlKey || e.metaKey;
+    
     if (e.shiftKey) {
-      document.getElementById('of-tp').value = fpc(price, cPair);
+      document.getElementById('of-tp').value = frp(price, cPair); // ✅ Use Raw Price
       ORDERS.filter(o => o.pair === cPair && o.status === 'filled').forEach(o => { o.tp = price });
       const el = document.getElementById('of-tp'); el.style.borderColor = '#00e5a0'; setTimeout(() => el.style.borderColor = 'rgba(0,229,160,.2)', 700);
     } else if (e.ctrlKey || e.metaKey) {
-      document.getElementById('of-sl').value = fpc(price, cPair);
+      document.getElementById('of-sl').value = frp(price, cPair); // ✅ Use Raw Price
       ORDERS.filter(o => o.pair === cPair && o.status === 'filled').forEach(o => { o.sl = price });
       const el = document.getElementById('of-sl'); el.style.borderColor = '#ff4560'; setTimeout(() => el.style.borderColor = 'rgba(255,69,96,.2)', 700);
     } else {
-      document.getElementById('of-price').value = fpc(price, cPair);
+      // Regular click: only update entry price if user is explicitly in "Order Mode"
+      document.getElementById('of-price').value = frp(price, cPair); // ✅ Use Raw Price
       const el = document.getElementById('of-price'); el.style.borderColor = '#4fa3ff'; setTimeout(() => el.style.borderColor = '', 700);
     }
     updateOFCalc(); renderOrders(); renderChart();
@@ -6566,7 +6594,7 @@
   // ✅ Register Service Worker for PWA/offline support
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/service-worker.js?v=19.9.11')
+      navigator.serviceWorker.register('/service-worker.js?v=19.9.12')
 .catch(() => {});
     });
   }
@@ -6580,7 +6608,14 @@
     if (e.key === 'Escape' && modal) { closeModal(modal.querySelector('.cancel')); return; }
     if (e.key === 'l' || e.key === 'L') { setOS('long'); showToast('Switched to LONG', 'info', 1500); }
     else if (e.key === 's' || e.key === 'S') { setOS('short'); showToast('Switched to SHORT', 'info', 1500); }
-    else if (e.key === 'Enter') { e.preventDefault(); placeOrder(); }
+    // ✅ ENTER GUARD: Only place order if focus is within the order form to prevent ghost orders
+    else if (e.key === 'Enter') { 
+      const of = document.querySelector('.order-form');
+      if (of && (of.contains(document.activeElement) || document.activeElement === document.body)) {
+        e.preventDefault(); 
+        placeOrder(); 
+      }
+    }
   });
   // Also handle Escape globally for modals
   document.addEventListener('keydown', (e) => {
@@ -6627,7 +6662,7 @@
       <b>⚠️ RISK DISCLOSURE:</b> Trading cryptocurrencies carries a high level of risk and may not be suitable for all investors. The high degree of leverage can work against you as well as for you. Before deciding to trade, you should carefully consider your investment objectives, level of experience, and risk appetite. The signals provided by AltScalp PRO are for educational purposes only and do not constitute financial advice.
     </div>
     <div style="margin-top:20px; font-size:9px; color:var(--td); opacity:0.5">
-      Powered by Institutional AI & Deep Learning Model v19.9.11
+      Powered by Institutional AI & Deep Learning Model v19.9.13
     </div>
   </footer>
 </body>
