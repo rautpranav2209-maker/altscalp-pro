@@ -4597,27 +4597,31 @@
   function lpen(l) { return l < 0.4 ? .55 : l < 0.55 ? .70 : l < 0.70 ? .85 : 1.0 }
   function spen(sp) { return sp > 10 ? -2 : sp > 7 ? -1.2 : sp > 5 ? -.6 : sp > 3 ? -.2 : 0 }
   function calcSig(d) { 
-    // ✅ WORLD-GRADE SHARP ENGINE: Dynamic Momentum + Institutional Flow
+    // ✅ HYPER-SHARP SCALPING ENGINE: predictive flow + micro-momentum
     let mom = 0;
     const m5 = d.m5 !== undefined ? d.m5 : (d.chg || 0);
     const h1 = d.h1 !== undefined ? d.h1 : (d.chg || 0);
-    const h24 = d.h24 !== undefined ? d.h24 : (d.chg || 0);
-    const flow = d.flow || 0;
+    const flow = d.flow || 0; // Buy/Sell imbalance
 
     if (curTF === '1m') {
-      // 1m Scalp: 75% 5m momentum + 25% Flow imbalance
-      mom = (m5 * 0.75) + (flow * 2.5);
+      // 1m Scalp: Extreme weight on Flow (predictive) + Local momentum
+      mom = (m5 * 0.85) + (flow * 3.5);
     } else {
-      // 5m Scalp: 50% 5m mom + 30% h1 + 20% Flow
-      mom = (m5 * 0.50) + (h1 * 0.30) + (flow * 2.0);
+      // 5m Scalp: Balance Flow and Momentum
+      mom = (m5 * 1.10) + (flow * 2.5);
     }
     
-    // Weighted Institutional Signal Components
-    let r = mom * 2.2 + d.ob * 1.5 + (d.rsi - 50) * 0.045 + d.vd * 1.4 + d.fr * 20 + d.sent * 1.2 + spen(d.sp); 
+    // Institutional Components with high-sensitivity weights
+    let r = mom * 2.5 + d.ob * 1.8 + (d.rsi - 50) * 0.05 + d.vd * 1.6 + d.fr * 25 + d.sent * 1.4 + spen(d.sp); 
     
-    // ✅ CRASH PREVENTION: Hard-cap if flow or momentum is extremely negative
-    if (m5 < -1.0 || flow < -0.5) { if (r > 0.3) r = 0.3; } // Force 'WAIT' or 'SHORT'
-    if (m5 > 1.0 || flow > 0.5) { if (r < -0.3) r = -0.3; } // Force 'WAIT' or 'LONG'
+    // ✅ REAL-TIME CRASH/PUMP DETECTION: Immediate Signal Reversal
+    // If momentum is negative but signal is long, force reversal to catch the turn faster
+    if (m5 < -0.2 && r > 0.5) r = -0.5; // Instant flip to SHORT/WAIT if price dips
+    if (m5 > 0.2 && r < -0.5) r = 0.5;  // Instant flip to LONG/WAIT if price pumps
+    
+    // Deep Crash Hard-Cap
+    if (m5 < -1.0 || flow < -0.6) { if (r > 0.2) r = 0.2; } 
+    if (m5 > 1.0 || flow > 0.6) { if (r < -0.2) r = -0.2; } 
 
     return +(r * vpen(d.vol) * lpen(d.liq)).toFixed(3) 
   }
@@ -6444,12 +6448,21 @@
     const d = PAIRS.find(x => x.p === cPair); if (!d) return;
     const s = calcSig(d);
     
-    // ✅ ACCURACY METER: Calculate confidence based on TF agreement and flow
+    // ✅ SHARP ACCURACY RECALIBRATION: Instant Momentum Divergence Penalty
     const s1 = s;
-    const s5 = calcSig({ ...d, m5: (d.m5 || 0) * 0.7, h1: (d.h1 || 0) * 0.8, flow: (d.flow || 0) * 0.9 });
-    const agree = (s1 > 0.5 && s5 > 0.5) || (s1 < -0.5 && s5 < -0.5);
+    const s5 = calcSig({ ...d, m5: (d.m5 || 0) * 0.8, h1: (d.h1 || 0) * 0.8, flow: (d.flow || 0) * 1.2 }); // flow is weighted higher for 5m
+    
+    // Tightened Agreement: Must agree on both direction AND strength (>0.8)
+    const agree = (s1 > 1.0 && s5 > 0.8) || (s1 < -1.0 && s5 < -0.8);
+    
+    // Divergence Penalty: Signal LONG while Price FALLING? Confidence CRASHES.
+    const divergence = (s1 > 0 && (d.m5 || 0) < -0.1) || (s1 < 0 && (d.m5 || 0) > 0.1);
+    
     const flowStr = Math.min(100, Math.abs(d.flow || 0) * 150);
-    const confidence = Math.round((agree ? 85 : 60) + (flowStr * 0.15));
+    let confidence = Math.round((agree ? 85 : 60) + (flowStr * 0.15));
+    
+    if (divergence) confidence = Math.max(30, confidence - 40); // Instant crash to "LOW ACCURACY"
+    if (Math.abs(d.m5 || 0) > 1.2) confidence = Math.max(20, confidence - 20); // Volatility penalty
 
     const color = sigColor(s);
     const bt = sigBt(s);
@@ -6594,7 +6607,7 @@
   // ✅ Register Service Worker for PWA/offline support
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/service-worker.js?v=19.9.12')
+      navigator.serviceWorker.register('/service-worker.js?v=19.9.14')
 .catch(() => {});
     });
   }
@@ -6662,7 +6675,7 @@
       <b>⚠️ RISK DISCLOSURE:</b> Trading cryptocurrencies carries a high level of risk and may not be suitable for all investors. The high degree of leverage can work against you as well as for you. Before deciding to trade, you should carefully consider your investment objectives, level of experience, and risk appetite. The signals provided by AltScalp PRO are for educational purposes only and do not constitute financial advice.
     </div>
     <div style="margin-top:20px; font-size:9px; color:var(--td); opacity:0.5">
-      Powered by Institutional AI & Deep Learning Model v19.9.13
+      Powered by Institutional AI & Deep Learning Model v19.9.14-SHARP
     </div>
   </footer>
 </body>
