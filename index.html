@@ -4597,31 +4597,27 @@
   function lpen(l) { return l < 0.4 ? .55 : l < 0.55 ? .70 : l < 0.70 ? .85 : 1.0 }
   function spen(sp) { return sp > 10 ? -2 : sp > 7 ? -1.2 : sp > 5 ? -.6 : sp > 3 ? -.2 : 0 }
   function calcSig(d) { 
-    // ✅ HYPER-SHARP SCALPING ENGINE: predictive flow + micro-momentum
+    // ✅ HYPER-SHARP SCALPING ENGINE 2.0: Predictive Flow + Micro-Momentum
     let mom = 0;
     const m5 = d.m5 !== undefined ? d.m5 : (d.chg || 0);
-    const h1 = d.h1 !== undefined ? d.h1 : (d.chg || 0);
-    const flow = d.flow || 0; // Buy/Sell imbalance
+    const flow = d.flow || 0; 
 
-    if (curTF === '1m') {
-      // 1m Scalp: Extreme weight on Flow (predictive) + Local momentum
-      mom = (m5 * 0.85) + (flow * 3.5);
-    } else {
-      // 5m Scalp: Balance Flow and Momentum
-      mom = (m5 * 1.10) + (flow * 2.5);
-    }
+    // Tightened Micro-Weights (prevent saturation)
+    const wMom = curTF === '1m' ? 0.75 : 0.95;
+    const wFlow = curTF === '1m' ? 3.0 : 2.0;
+    mom = (m5 * wMom) + (flow * wFlow);
     
     // Institutional Components with high-sensitivity weights
-    let r = mom * 2.5 + d.ob * 1.8 + (d.rsi - 50) * 0.05 + d.vd * 1.6 + d.fr * 25 + d.sent * 1.4 + spen(d.sp); 
+    let r = mom * 2.2 + d.ob * 1.5 + (d.rsi - 50) * 0.04 + d.vd * 1.4 + d.fr * 20 + d.sent * 1.2 + spen(d.sp); 
     
-    // ✅ REAL-TIME CRASH/PUMP DETECTION: Immediate Signal Reversal
-    // If momentum is negative but signal is long, force reversal to catch the turn faster
-    if (m5 < -0.2 && r > 0.5) r = -0.5; // Instant flip to SHORT/WAIT if price dips
-    if (m5 > 0.2 && r < -0.5) r = 0.5;  // Instant flip to LONG/WAIT if price pumps
+    // ✅ ULTRA-FAST DIVERGENCE PROTECTION
+    // If momentum contradicts direction, crash the signal to 0.0 or flip it.
+    if (m5 < -0.05 && r > 0.1) r = -0.6; // Instant pivot if LONG but falling
+    if (m5 > 0.05 && r < -0.1) r = 0.6;  // Instant pivot if SHORT but rising
     
-    // Deep Crash Hard-Cap
-    if (m5 < -1.0 || flow < -0.6) { if (r > 0.2) r = 0.2; } 
-    if (m5 > 1.0 || flow > 0.6) { if (r < -0.2) r = -0.2; } 
+    // Safety Hard-Cap for extreme crashes
+    if (m5 < -0.8 || flow < -0.5) { if (r > 0.1) r = 0.1; } 
+    if (m5 > 0.8 || flow > 0.5) { if (r < -0.1) r = -0.1; } 
 
     return +(r * vpen(d.vol) * lpen(d.liq)).toFixed(3) 
   }
@@ -6448,21 +6444,26 @@
     const d = PAIRS.find(x => x.p === cPair); if (!d) return;
     const s = calcSig(d);
     
-    // ✅ SHARP ACCURACY RECALIBRATION: Instant Momentum Divergence Penalty
+    // ✅ SHARP ACCURACY 2.0: Dynamic Conviction Modeling
     const s1 = s;
-    const s5 = calcSig({ ...d, m5: (d.m5 || 0) * 0.8, h1: (d.h1 || 0) * 0.8, flow: (d.flow || 0) * 1.2 }); // flow is weighted higher for 5m
+    const s5 = calcSig({ ...d, m5: (d.m5 || 0) * 0.7, flow: (d.flow || 0) * 1.1 }); 
     
-    // Tightened Agreement: Must agree on both direction AND strength (>0.8)
-    const agree = (s1 > 1.0 && s5 > 0.8) || (s1 < -1.0 && s5 < -0.8);
+    // Stricter Agreement: Must have strong conviction on both TFs
+    const agree = (s1 > 1.8 && s5 > 1.2) || (s1 < -1.8 && s5 < -1.2);
+    const weakAgree = (s1 > 0.8 && s5 > 0.4) || (s1 < -0.8 && s5 < -0.4);
     
-    // Divergence Penalty: Signal LONG while Price FALLING? Confidence CRASHES.
-    const divergence = (s1 > 0 && (d.m5 || 0) < -0.1) || (s1 < 0 && (d.m5 || 0) > 0.1);
+    // Hyper-Sensitive Divergence: Even tiny reversals tank confidence
+    const divergence = (s1 > 0 && (d.m5 || 0) < -0.05) || (s1 < 0 && (d.m5 || 0) > 0.05);
     
-    const flowStr = Math.min(100, Math.abs(d.flow || 0) * 150);
-    let confidence = Math.round((agree ? 85 : 60) + (flowStr * 0.15));
+    const flowStr = Math.min(100, Math.abs(d.flow || 0) * 120);
+    // Lower baseline: Range is now 35 - 90%
+    let confidence = Math.round((agree ? 82 : (weakAgree ? 55 : 35)) + (flowStr * 0.08));
     
-    if (divergence) confidence = Math.max(30, confidence - 40); // Instant crash to "LOW ACCURACY"
-    if (Math.abs(d.m5 || 0) > 1.2) confidence = Math.max(20, confidence - 20); // Volatility penalty
+    if (divergence) {
+      confidence = Math.max(25, confidence - 45); // Instant "UNRELIABLE" status
+      if (Math.abs(s1) > 1.0) s = s * 0.5; // Suppress signal strength too
+    }
+    if (Math.abs(d.m5 || 0) > 1.0) confidence = Math.max(20, confidence - 25); 
 
     const color = sigColor(s);
     const bt = sigBt(s);
