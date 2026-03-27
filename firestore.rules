@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ────────────────────────────────────────────────────
+
+    /** Is the caller authenticated? */
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    /** Does the caller own this document (uid matches document path)? */
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    /** Is the caller an admin (custom claim set by server)? */
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    // ── User profiles ────────────────────────────────────────────────────────
+    // Users can read their own profile.
+    // ALL writes are blocked from the client — only the server (Admin SDK) writes here.
+    match /users/{uid} {
+      allow read:  if isOwner(uid);
+      allow write: if false;  // Server-only via Admin SDK
+
+      // Trade history sub-collection
+      match /trades/{tradeId} {
+        allow read:  if isOwner(uid);
+        allow write: if false;
+      }
+    }
+
+    // ── Payments (deduplication index) ──────────────────────────────────────
+    // No client access — server writes only.
+    match /payments/{paymentId} {
+      allow read:  if false;
+      allow write: if false;
+    }
+
+    // ── Transactions (audit log) ─────────────────────────────────────────────
+    // Users can read their own audit entries.
+    // Writes are server-only; clients cannot create or modify audit records.
+    match /transactions/{txId} {
+      allow read:  if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
+
+    // ── Admin-only collections ───────────────────────────────────────────────
+    match /admin/{document=**} {
+      allow read:  if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // ── Deny everything else ─────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
