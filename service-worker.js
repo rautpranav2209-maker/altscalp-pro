@@ -1,8 +1,12 @@
-const CACHE_NAME = 'altscalp-v19.9.15-SHARP-AI';
+const APP_VERSION = '2.0.0';
+const CACHE_NAME = `altscalp-v${APP_VERSION}`;
 const ASSETS = [
   '/',
-  '/index.html?v=19.9.15-SHARP-AI',
-  '/manifest.json'
+  '/index.html',
+  '/styles.css',
+  '/app.js',
+  '/manifest.json',
+  '/logo.png'
 ];
 
 self.addEventListener('install', (e) => {

@@ -1,8 +1,36 @@
 {
   "name": "altscalp-pro",
-  "version": "19.9.15-SHARP-AI",
-  "description": "Vercel Build Trigger Override",
+  "version": "2.0.0",
+  "description": "AltScalp PRO — AI-powered crypto scalping signals dashboard with real-time order flow, ML signals, risk management and paper trading",
+  "author": "AltScalp PRO <support@altscalp.pro>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rautpranav2209-maker/altscalp-pro.git"
+  },
+  "homepage": "https://altscalp-pro.vercel.app",
+  "keywords": [
+    "crypto",
+    "trading",
+    "scalping",
+    "signals",
+    "ai",
+    "dashboard"
+  ],
   "scripts": {
-    "build": "echo 'Triggering custom vercel.json build command'"
+    "start": "npx serve -s . -p 3000",
+    "dev": "npx serve -s . -p 3000",
+    "build": "mkdir -p public && cp index.html styles.css app.js manifest.json service-worker.js logo.png 404.html chart.umd.js firebase-app.js firebase-auth.js firebase-firestore.js firebase-analytics.js razorpay.js tv.js tv-widget.js public/ 2>/dev/null || true"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.0",
+    "firebase": "^10.7.0",
+    "razorpay": "^2.9.2"
+  },
+  "devDependencies": {
+    "serve": "^14.2.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
