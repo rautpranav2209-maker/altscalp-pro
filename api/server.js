@@ -22,6 +22,10 @@ const createOrder   = require('./create-order');
 const verifyPayment = require('./verify-payment');
 const razorpayWebhook = require('./webhooks/razorpay');
 
+const rateLimit         = require('./middleware/rateLimit');
+const { getLivePrices } = require('./prices');
+const { attachWebSocket } = require('./websocket');
+
 const app  = express();
 const PORT = process.env.PORT || 3001;
 
@@ -101,6 +105,18 @@ app.post(
 // Razorpay webhook (no auth — verified by HMAC signature)
 app.post('/webhooks/razorpay', razorpayWebhook);
 
+// Live cryptocurrency prices (public, rate-limited)
+app.get('/api/prices', rateLimit('prices'), async (req, res) => {
+  try {
+    const prices = await getLivePrices();
+    res.setHeader('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=5');
+    return res.status(200).json(prices);
+  } catch (err) {
+    console.error('[server] /api/prices error:', err.message);
+    return res.status(503).json({ message: 'Price data temporarily unavailable. Please retry shortly.' });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }));
 
@@ -114,8 +130,11 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`[server] AltScalp PRO API listening on port ${PORT}`);
 });
+
+// Attach WebSocket server for real-time price streaming
+attachWebSocket(server);
 
 module.exports = app;
