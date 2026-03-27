@@ -8,6 +8,7 @@
 
 const crypto = require('crypto');
 const admin = require('firebase-admin');
+const { logTransaction } = require('./utils/transactionLogger');
 
 if (!admin.apps.length) {
   const serviceAccount = JSON.parse(
@@ -42,8 +43,22 @@ module.exports = async (req, res) => {
 
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan } = req.body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !plan) {
-      return res.status(400).json({ message: 'Missing payment details' });
+    // ✅ SECURITY: Validate and sanitize all inputs
+    const VALID_PLAN = /^(monthly|yearly)$/;
+    const ALPHANUMERIC = /^[A-Za-z0-9_]+$/;
+    const HEX_PATTERN = /^[a-f0-9]+$/i;
+
+    if (!razorpay_order_id || !ALPHANUMERIC.test(razorpay_order_id)) {
+      return res.status(400).json({ message: 'Invalid razorpay_order_id' });
+    }
+    if (!razorpay_payment_id || !ALPHANUMERIC.test(razorpay_payment_id)) {
+      return res.status(400).json({ message: 'Invalid razorpay_payment_id' });
+    }
+    if (!razorpay_signature || !HEX_PATTERN.test(razorpay_signature)) {
+      return res.status(400).json({ message: 'Invalid razorpay_signature' });
+    }
+    if (!plan || !VALID_PLAN.test(plan)) {
+      return res.status(400).json({ message: 'Invalid plan. Must be monthly or yearly.' });
     }
 
     // ✅ SECURITY: Cryptographic signature verification
@@ -53,7 +68,13 @@ module.exports = async (req, res) => {
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest('hex');
 
-    if (expectedSignature !== razorpay_signature) {
+    // ✅ SECURITY: Timing-safe comparison to prevent timing attacks
+    const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
+    const receivedBuffer = Buffer.from(razorpay_signature, 'utf8');
+    const signaturesMatch = expectedBuffer.length === receivedBuffer.length &&
+      crypto.timingSafeEqual(expectedBuffer, receivedBuffer);
+
+    if (!signaturesMatch) {
       console.error(`[verify-payment] SIGNATURE MISMATCH for uid=${uid}, paymentId=${razorpay_payment_id}`);
       return res.status(400).json({ success: false, message: 'Payment verification failed' });
     }
@@ -98,6 +119,19 @@ module.exports = async (req, res) => {
       amount: PLAN_PRICES[plan],
       verifiedAt: admin.firestore.FieldValue.serverTimestamp()
     });
+
+    // ✅ AUDIT: Log transaction details for compliance & fraud detection
+    // (logTransaction writes to 'transactions' collection asynchronously)
+    logTransaction({
+      uid,
+      paymentId: razorpay_payment_id,
+      orderId: razorpay_order_id,
+      amount: PLAN_PRICES[plan],
+      plan,
+      status: 'success',
+      source: 'verify-payment',
+      req
+    }).catch(err => console.error('[verify-payment] Audit log failed:', err.message));
 
     await batch.commit();
 
