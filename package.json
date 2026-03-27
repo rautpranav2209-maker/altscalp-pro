@@ -1,8 +1,1 @@
-{
-  "name": "altscalp-pro",
-  "version": "19.9.15-SHARP-AI",
-  "description": "Vercel Build Trigger Override",
-  "scripts": {
-    "build": "echo 'Triggering custom vercel.json build command'"
-  }
-}
+{"name": "altscalp-pro", "version": "2.0.0", "description": "Advanced cryptocurrency trading platform with real-time charting, AI-powered signals, and paper trading", "main": "index.js", "author": "Pranav Raut", "license": "MIT", "repository": { "type": "git", "url": "https://github.com/rautpranav2209-maker/altscalp-pro.git" }, "scripts": { "start": "node index.js", "build": "npm run build", "dev": "nodemon index.js" }}
