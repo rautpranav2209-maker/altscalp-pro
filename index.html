@@ -5835,6 +5835,29 @@
     showToast(`${o.pair} ${reason}: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`, pnl >= 0 ? 'success' : 'warning');
     updateWinRate();
   }
+  /* ═══════════ GLOBAL TP/SL MONITOR (all pairs, all orders) ═══════════ */
+  function checkOpenTrades() {
+    if (!ORDERS.length) return;
+    const now = Date.now();
+    const filled = ORDERS.filter(o => o.status === 'filled' && !o.tpHit && !o.slHit);
+    filled.forEach(o => {
+      // Execution cooldown: prevent instant close within 1.5 s of fill
+      if (o.filledAt && (now - o.filledAt < 1500)) return;
+      const pd2 = PAIRS.find(d => d.p === o.pair);
+      if (!pd2) return;
+      const cp = pd2.price;
+      if (o.tp) {
+        const tpHit = o.side === 'long' ? cp >= o.tp : cp <= o.tp;
+        if (tpHit) { o.tpHit = true; setTimeout(() => doCloseOrd(o.id, 'TP Hit'), 0); return; }
+      }
+      if (o.sl) {
+        const slHit = o.side === 'long' ? cp <= o.sl : cp >= o.sl;
+        if (slHit) { o.slHit = true; setTimeout(() => doCloseOrd(o.id, 'SL Hit'), 0); }
+      }
+    });
+  }
+  setInterval(checkOpenTrades, 500);
+
   function closeOrd(id, reason = 'Manual') {
     if (reason !== 'Manual') { doCloseOrd(id, reason); return; }
     const o = ORDERS.find(x => x.id === id); if (!o) return;
@@ -6648,6 +6671,13 @@
   window.addEventListener('beforeunload', () => { saveState(); savePrefs(); });
 
 </script>
+  <!-- ══════════ LIVE PRICE SYNC & ENHANCEMENTS ══════════ -->
+  <!-- WebSocket URL — set to your ws server address (e.g. wss://your-ws.railway.app)
+       or leave empty ('') to use HTTP polling fallback via /api/prices -->
+  <script>window.ALTSCALP_WS_URL = '';</script>
+  <script src="/frontend/slippage.js"></script>
+  <script src="/frontend/price-sync.js"></script>
+  <script src="/frontend/alert-persistence.js"></script>
   <!-- ══════════ FOOTER & LEGAL ══════════ -->
   <!-- Support Modal Removed -->
   <!-- Support Modal Removed -->

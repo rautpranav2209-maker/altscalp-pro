@@ -1,10 +1,11 @@
 {
   "version": 2,
   "framework": null,
-  "buildCommand": "mkdir -p public && cp index.html manifest.json service-worker.js logo.png 404.html *.js public/ 2>/dev/null || true",
+  "buildCommand": "mkdir -p public/frontend && cp index.html manifest.json service-worker.js logo.png 404.html *.js public/ 2>/dev/null || true && cp frontend/*.js public/frontend/ 2>/dev/null || true",
   "outputDirectory": "public",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/frontend/(.*)", "destination": "/frontend/$1" },
     { "source": "/manifest.json", "destination": "/manifest.json" },
     { "source": "/service-worker.js", "destination": "/service-worker.js" },
     { "source": "/(.*)", "destination": "/index.html" }

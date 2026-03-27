@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "dependencies": {
     "firebase-admin": "^11.10.1",
-    "razorpay": "^2.9.2"
+    "razorpay": "^2.9.2",
+    "ws": "^8.18.0"
   }
 }
