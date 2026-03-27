@@ -5835,6 +5835,30 @@
     showToast(`${o.pair} ${reason}: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}`, pnl >= 0 ? 'success' : 'warning');
     updateWinRate();
   }
+
+  /* ═══════════ AUTO TP/SL MONITOR (all pairs, all open orders) ═══════════ */
+  function checkOpenTrades() {
+    if (!ORDERS || !ORDERS.length) return;
+    const now = Date.now();
+    // Iterate over a copy so splice inside doCloseOrd doesn't skip entries
+    [...ORDERS].forEach(o => {
+      if (o.status !== 'filled') return;
+      // Execution cooldown: skip if filled less than 1.5s ago to avoid price-jitter closes
+      if (o.filledAt && (now - o.filledAt < 1500)) return;
+      const pd2 = PAIRS.find(d => d.p === o.pair); if (!pd2) return;
+      const cur = pd2.price;
+      if (o.tp && !o.tpHit) {
+        const hit = o.side === 'long' ? cur >= o.tp : cur <= o.tp;
+        if (hit) { o.tpHit = true; doCloseOrd(o.id, 'TP Hit'); return; }
+      }
+      if (o.sl && !o.slHit) {
+        const hit = o.side === 'long' ? cur <= o.sl : cur >= o.sl;
+        if (hit) { o.slHit = true; doCloseOrd(o.id, 'SL Hit'); return; }
+      }
+    });
+  }
+  setInterval(checkOpenTrades, 150);
+
   function closeOrd(id, reason = 'Manual') {
     if (reason !== 'Manual') { doCloseOrd(id, reason); return; }
     const o = ORDERS.find(x => x.id === id); if (!o) return;
