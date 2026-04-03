@@ -25,6 +25,10 @@
   <script src="/firebase-analytics.js"></script>
   <script src="/razorpay.js"></script>
   <script src="/tv.js"></script>
+  <!-- Real-time price sync, alert persistence, slippage simulation -->
+  <script src="/frontend/price-sync.js" defer></script>
+  <script src="/frontend/alert-persistence.js" defer></script>
+  <script src="/frontend/slippage.js" defer></script>
 
   <!-- Razorpay SDK -->
   <style>
@@ -4584,29 +4588,33 @@
   function lpen(l) { return l < 0.4 ? .55 : l < 0.55 ? .70 : l < 0.70 ? .85 : 1.0 }
   function spen(sp) { return sp > 10 ? -2 : sp > 7 ? -1.2 : sp > 5 ? -.6 : sp > 3 ? -.2 : 0 }
   function calcSig(d) { 
-    // ✅ HYPER-SHARP SCALPING ENGINE 2.0: Predictive Flow + Micro-Momentum
+    // ✅ CORRECTED SIGNAL ENGINE (PR #6 weights):
+    //    RSI: 0.04 → 0.15, Flow: 3.0/2.0 → 1.2/1.5, OB: 1.5 → 0.9
+    //    Volatility damping applied EARLY; divergence: gentle 40% dampen
     let mom = 0;
-    const m5 = d.m5 !== undefined ? d.m5 : (d.chg || 0);
-    const flow = d.flow || 0; 
+    const m5 = Math.max(-5, Math.min(5, d.m5 !== undefined ? d.m5 : (d.chg || 0)));
+    const flow = Math.max(-1, Math.min(1, d.flow || 0));
 
-    // Tightened Micro-Weights (prevent saturation)
-    const wMom = curTF === '1m' ? 0.75 : 0.95;
-    const wFlow = curTF === '1m' ? 3.0 : 2.0;
+    // Timeframe-adjusted flow weights (corrected)
+    const wMom  = curTF === '1m' ? 0.75 : 0.95;
+    const wFlow = curTF === '1m' ? 1.2  : 1.5;   // was 3.0/2.0
     mom = (m5 * wMom) + (flow * wFlow);
-    
-    // Institutional Components with high-sensitivity weights
-    let r = mom * 2.2 + d.ob * 1.5 + (d.rsi - 50) * 0.04 + d.vd * 1.4 + d.fr * 20 + d.sent * 1.2 + spen(d.sp); 
-    
-    // ✅ ULTRA-FAST DIVERGENCE PROTECTION
-    // If momentum contradicts direction, crash the signal to 0.0 or flip it.
-    if (m5 < -0.05 && r > 0.1) r = -0.6; // Instant pivot if LONG but falling
-    if (m5 > 0.05 && r < -0.1) r = 0.6;  // Instant pivot if SHORT but rising
-    
-    // Safety Hard-Cap for extreme crashes
-    if (m5 < -0.8 || flow < -0.5) { if (r > 0.1) r = 0.1; } 
-    if (m5 > 0.8 || flow > 0.5) { if (r < -0.1) r = -0.1; } 
 
-    return +(r * vpen(d.vol) * lpen(d.liq)).toFixed(3) 
+    // Volatility damping applied EARLY (before weights)
+    const volDamp = vpen(d.vol);
+
+    // Signal composition with corrected weights
+    let r = volDamp * (mom * 1.8 + d.ob * 0.9 + (d.rsi - 50) * 0.15 + d.vd * 1.4 + d.fr * 20 + d.sent * 1.2 + spen(d.sp));
+
+    // ✅ Gentle divergence protection (40% dampen, not hard flip to ±0.6)
+    if (m5 < -0.05 && r > 0.1) r *= 0.6;
+    if (m5 > 0.05  && r < -0.1) r *= 0.6;
+
+    // Safety hard-caps for extreme crashes
+    if ((m5 < -0.8 || flow < -0.5) && r > 0.1) r = 0.1;
+    if ((m5 >  0.8 || flow >  0.5) && r < -0.1) r = -0.1;
+
+    return +(Math.max(-4, Math.min(4, r * lpen(d.liq)))).toFixed(3)
   }
   function sigColor(s) { return s >= 0 ? '#00e5a0' : '#ff4560' }
   function sigBt(s) { return s > 2 ? 'STRONG LONG' : s > 0.5 ? 'LONG' : s < -2 ? 'STRONG SHORT' : s < -0.5 ? 'SHORT' : 'WAIT' }
@@ -6630,6 +6638,20 @@
   window.addEventListener('resize', debounce(() => {
     if (cBuilt) { sizeCanvases(); renderChart(); }
   }, 150));
+
+  // ✅ Global TP/SL monitor — checks all filled orders across ALL pairs every 500ms
+  function checkOpenTrades() {
+    const filled = ORDERS.filter(o => o.status === 'filled' && !o.tpHit && !o.slHit);
+    filled.forEach(o => {
+      const cp = PAIRS.find(d => d.p === o.pair)?.price;
+      if (!cp) return;
+      if (o.tp && (o.side === 'long' ? cp >= o.tp : cp <= o.tp))
+        { o.tpHit = true; setTimeout(() => doCloseOrd(o.id, 'TP Hit'), 0); return; }
+      if (o.sl && (o.side === 'long' ? cp <= o.sl : cp >= o.sl))
+        { o.slHit = true; setTimeout(() => doCloseOrd(o.id, 'SL Hit'), 0); }
+    });
+  }
+  setInterval(checkOpenTrades, 500);
 
   // Save prefs when leaving page
   window.addEventListener('beforeunload', () => { saveState(); savePrefs(); });
