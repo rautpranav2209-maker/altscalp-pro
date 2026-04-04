@@ -5789,8 +5789,32 @@
     const tp = parseFloat((tpIn.value || '').replace(/[^0-9.]/g, '')) || null;
     const sl = parseFloat((slIn.value || '').replace(/[^0-9.]/g, '')) || null;
     const isMkt = type === 'market';
+    const entryPx = isMkt ? mktP : price;
+
+    // ✅ Validate TP/SL are on the correct side of entry (prevent instant-close bug)
+    if (tp !== null) {
+      if (OSIDE === 'long' && tp <= entryPx) {
+        tpIn.classList.add('invalid'); setTimeout(() => tpIn.classList.remove('invalid'), 600);
+        showToast('Take Profit must be above entry price for Long orders', 'error'); return;
+      }
+      if (OSIDE === 'short' && tp >= entryPx) {
+        tpIn.classList.add('invalid'); setTimeout(() => tpIn.classList.remove('invalid'), 600);
+        showToast('Take Profit must be below entry price for Short orders', 'error'); return;
+      }
+    }
+    if (sl !== null) {
+      if (OSIDE === 'long' && sl >= entryPx) {
+        slIn.classList.add('invalid'); setTimeout(() => slIn.classList.remove('invalid'), 600);
+        showToast('Stop Loss must be below entry price for Long orders', 'error'); return;
+      }
+      if (OSIDE === 'short' && sl <= entryPx) {
+        slIn.classList.add('invalid'); setTimeout(() => slIn.classList.remove('invalid'), 600);
+        showToast('Stop Loss must be above entry price for Short orders', 'error'); return;
+      }
+    }
+
     const ord = {
-      id: OID++, pair: cPair, side: OSIDE, type, price, entry: isMkt ? mktP : price, qty, tp, sl,
+      id: OID++, pair: cPair, side: OSIDE, type, price, entry: entryPx, qty, tp, sl,
       status: isMkt ? 'filled' : 'open', time: Date.now(), 
       filledAt: isMkt ? Date.now() : null, // Track when it was actually filled
       tpHit: false, slHit: false,
@@ -5970,11 +5994,11 @@
         if (o.filledAt && (now - o.filledAt < 1500)) return;
 
         if (o.tp && !o.tpHit) { 
-          const h = o.side === 'long' ? last.c >= o.tp : last.c <= o.tp; 
+          const h = o.side === 'long' ? last.c > o.tp : last.c < o.tp; 
           if (h) { o.tpHit = true; setTimeout(() => closeOrd(o.id, 'TP Hit'), 0) } 
         }
         if (o.sl && !o.slHit) { 
-          const h = o.side === 'long' ? last.c <= o.sl : last.c >= o.sl; 
+          const h = o.side === 'long' ? last.c < o.sl : last.c > o.sl; 
           if (h) { o.slHit = true; setTimeout(() => closeOrd(o.id, 'SL Hit'), 0) } 
         }
       });
